@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=230, height=320, initial-scale=1.0">
-    <title>Spotify LCD Display</title>
+    <title>Spotify</title>
+    <link href="https://fonts.googleapis.com/css2?family=Circular:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -13,162 +14,227 @@
         }
         
         body {
-            background: black;
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #121212;
+            color: #ffffff;
+            font-family: 'Circular', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
             width: 230px;
             height: 320px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            position: relative;
         }
         
         .header {
-            background: black;
-            color: white;
-            padding: 4px 8px;
-            text-align: center;
-            font-size: 9px;
-            font-weight: 500;
-            border-bottom: 1px solid #333;
-        }
-        
-        .album-art-container {
-            flex: 1;
+            background: linear-gradient(180deg, #1db954 0%, #1ed760 100%);
+            color: #000000;
+            padding: 8px 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 12px;
-            background: black;
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3);
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, #121212 0%, #0f0f0f 100%);
+        }
+        
+        .album-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 20px 12px;
+            position: relative;
         }
         
         .album-art {
-            width: 110px;
-            height: 110px;
-            border-radius: 4px;
+            width: 140px;
+            height: 140px;
+            border-radius: 8px;
             object-fit: cover;
-            border: 1px solid #333;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .album-art:hover {
+            transform: scale(1.02);
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8);
         }
         
         .track-info {
-            padding: 8px 12px;
+            padding: 12px 16px 8px;
             text-align: center;
-            background: black;
-            border-top: 1px solid #333;
-            min-height: 50px;
+            background: #121212;
         }
         
         .track-title {
-            font-size: 11px;
+            font-size: 13px;
             font-weight: 600;
-            margin-bottom: 3px;
+            line-height: 1.3;
+            margin-bottom: 4px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            color: white;
+            color: #ffffff;
+            letter-spacing: -0.2px;
         }
         
         .track-artist {
-            font-size: 9px;
-            color: #999;
-            margin-bottom: 6px;
+            font-size: 11px;
+            color: #b3b3b3;
+            margin-bottom: 8px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            font-weight: 400;
+        }
+        
+        .track-artist:hover {
+            color: #ffffff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        
+        .progress-section {
+            padding: 0 16px 8px;
+            background: #121212;
         }
         
         .progress-bar {
             width: 100%;
-            height: 2px;
-            background: #333;
-            border-radius: 1px;
+            height: 4px;
+            background: #535353;
+            border-radius: 2px;
             overflow: hidden;
-            margin: 4px 0;
+            margin: 6px 0;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .progress-bar:hover {
+            background: #727272;
         }
         
         .progress-fill {
             height: 100%;
-            background: white;
+            background: #1db954;
             width: 0%;
-            transition: width 1s linear;
+            transition: width 0.5s ease;
+            border-radius: 2px;
+        }
+        
+        .progress-handle {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: #ffffff;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+        
+        .progress-bar:hover .progress-handle {
+            opacity: 1;
         }
         
         .time-info {
             display: flex;
             justify-content: space-between;
-            font-size: 7px;
-            color: #666;
-            margin-bottom: 4px;
+            font-size: 9px;
+            color: #b3b3b3;
+            font-weight: 400;
+            font-variant-numeric: tabular-nums;
         }
         
         .controls {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 16px;
-            padding: 8px;
-            background: black;
-            border-top: 1px solid #333;
+            gap: 20px;
+            padding: 12px 16px 16px;
+            background: #121212;
+            border-top: 1px solid #282828;
         }
         
         .control-btn {
-            background: black;
-            border: 1px solid #555;
-            color: white;
+            background: transparent;
+            border: none;
+            color: #b3b3b3;
             cursor: pointer;
-            padding: 6px;
+            padding: 8px;
             border-radius: 50%;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
+            user-select: none;
         }
         
         .control-btn:hover {
-            background: #222;
-            border-color: #777;
+            color: #ffffff;
+            transform: scale(1.06);
         }
         
         .control-btn:active {
-            background: #333;
+            transform: scale(0.96);
+        }
+        
+        .control-btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .control-btn.disabled:hover {
+            color: #b3b3b3;
+            transform: none;
         }
         
         .play-pause-btn {
-            width: 32px;
-            height: 32px;
-            background: white;
-            color: black;
-            border: 1px solid white;
-            font-size: 12px;
+            width: 48px;
+            height: 48px;
+            background: #ffffff;
+            color: #000000;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
         }
         
         .play-pause-btn:hover {
-            background: #ddd;
+            background: #f0f0f0;
+            transform: scale(1.04);
+        }
+        
+        .play-pause-btn:active {
+            transform: scale(0.98);
         }
         
         .prev-next-btn {
+            width: 32px;
+            height: 32px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .shuffle-repeat-btn {
             width: 28px;
             height: 28px;
-            font-size: 10px;
+            font-size: 12px;
         }
         
-        .status-indicator {
-            position: absolute;
-            top: 6px;
-            right: 6px;
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background: white;
-        }
-        
-        @keyframes scrollText {
-            0% {
-                transform: translateX(100%);
-            }
-            100% {
-                transform: translateX(-100%);
-            }
+        .shuffle-repeat-btn.active {
+            color: #1db954;
         }
         
         .no-track {
@@ -177,80 +243,217 @@
             align-items: center;
             justify-content: center;
             height: 100%;
-            color: #666;
+            color: #b3b3b3;
+            text-align: center;
+            padding: 20px;
         }
         
-        .no-track-icon {
-            font-size: 20px;
-            margin-bottom: 6px;
+        .no-track-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 8px;
         }
         
         .no-track-text {
-            font-size: 9px;
+            font-size: 12px;
+            line-height: 1.4;
+            opacity: 0.8;
+        }
+        
+        .spotify-logo {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 12px;
+            opacity: 0.6;
+        }
+        
+        .connection-status {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #1db954;
+            animation: pulse 2s infinite;
+        }
+        
+        .connection-status.disconnected {
+            background: #e22134;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+        /* Spotify-style loading animation */
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+        }
+        
+        .loading::after {
+            content: " ";
+            display: block;
+            width: 16px;
+            height: 16px;
+            margin: 2px;
+            border-radius: 50%;
+            border: 2px solid #1db954;
+            border-color: #1db954 transparent #1db954 transparent;
+            animation: loading 1.2s linear infinite;
+        }
+        
+        @keyframes loading {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        /* Device info at bottom */
+        
+        .device-info {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 7px;
+            color: #535353;
             text-align: center;
+            pointer-events: none;
         }
     </style>
 </head>
 
 <body>
-    <div class="status-indicator"></div>
+    <div class="connection-status" id="connectionStatus"></div>
 
     <div class="header">
         SPOTIFY
     </div>
 
-    <div id="player-content">
-        <div class="no-track">
-            <div class="no-track-icon">♫</div>
-            <div class="no-track-text">Connecting to Spotify...</div>
+    <div class="main-content">
+        <div id="player-content">
+            <div class="no-track">
+                <svg class="spotify-logo" viewBox="0 0 24 24" fill="#1db954">
+                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.859-.179-.982-.599-.122-.421.18-.861.599-.983 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02v.043zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.48.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                </svg>
+                <div class="no-track-title">Connect to Spotify</div>
+                <div class="no-track-text">Open Spotify and start playing music to see it here</div>
+            </div>
         </div>
     </div>
+
+    <div class="device-info">Spotify Connect • LCD Display</div>
 
     <script>
         let currentTrack = null;
         let isPlaying = false;
         let progress = 0;
         let duration = 0;
+        let isConnected = false;
 
-        // Mock data for testing - replace with actual Spotify API calls
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.classList.remove('disconnected');
+                isConnected = true;
+            } else {
+                status.classList.add('disconnected');
+                isConnected = false;
+            }
+        }
+
         function updateDisplay(trackData) {
             const content = document.getElementById('player-content');
 
-            if (!trackData) {
+            if (!trackData || !trackData.track_name) {
                 content.innerHTML = `
                     <div class="no-track">
-                        <div class="no-track-icon">♫</div>
-                        <div class="no-track-text">No track playing</div>
+                        <svg class="spotify-logo" viewBox="0 0 24 24" fill="#1db954">
+                            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.859-.179-.982-.599-.122-.421.18-.861.599-.983 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02v.043zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.48.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                        </svg>
+                        <div class="no-track-title">No music playing</div>
+                        <div class="no-track-text">Start playing on Spotify to control playback</div>
                     </div>`;
                 return;
             }
 
+            const progressPercent = duration > 0 ? (progress / duration) * 100 : 0;
+
             content.innerHTML = `
-                <div class="album-art-container">
-                    <img src="${trackData.albumArt}" alt="Album Art" class="album-art" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22 viewBox=%220 0 120 120%22><rect width=%22120%22 height=%22120%22 fill=%22%23333%22/><text x=%2260%22 y=%2260%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2212%22>♫</text></svg>'">
+                <div class="album-section">
+                    <img src="${trackData.album_art_url || generatePlaceholderArt()}" 
+                         alt="${trackData.album_name || 'Album'}" 
+                         class="album-art" 
+                         onerror="this.src='${generatePlaceholderArt()}'">
                 </div>
                 
                 <div class="track-info">
-                    <div class="track-title">${trackData.title}</div>
-                    <div class="track-artist">${trackData.artist}</div>
-                    
+                    <div class="track-title">${trackData.track_name}</div>
+                    <div class="track-artist">${trackData.artist_string}</div>
+                </div>
+
+                <div class="progress-section">
+                    <div class="progress-bar" onclick="seekToPosition(event)">
+                        <div class="progress-fill" style="width: ${progressPercent}%"></div>
+                        <div class="progress-handle" style="left: ${progressPercent}%"></div>
+                    </div>
                     <div class="time-info">
                         <span>${formatTime(progress)}</span>
                         <span>${formatTime(duration)}</span>
                     </div>
-                    
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${(progress/duration)*100}%"></div>
-                    </div>
                 </div>
 
                 <div class="controls">
-                    <button class="control-btn prev-next-btn" onclick="previousTrack()">⏮</button>
-                    <button class="control-btn play-pause-btn" onclick="togglePlayPause()">
-                        ${isPlaying ? '⏸' : '▶'}
+                    <button class="control-btn shuffle-repeat-btn" onclick="toggleShuffle()" title="Shuffle">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M13.151.922a.75.75 0 10-1.06 1.06L13.109 3H11.16a3.75 3.75 0 00-2.873 1.34l-6.173 7.356A2.25 2.25 0 01.39 12.5H0V14h.391a3.75 3.75 0 002.873-1.34l6.173-7.356A2.25 2.25 0 0111.161 4.5h1.95l-1.017 1.018a.75.75 0 001.06 1.06L15.98 3.75 13.151.922zM.391 3.5H0V2h.391c1.109 0 2.16.49 2.873 1.34L4.89 5.277l-.979 1.167-1.796-2.14A2.25 2.25 0 00.39 3.5z"/>
+                        </svg>
                     </button>
-                    <button class="control-btn prev-next-btn" onclick="nextTrack()">⏭</button>
+                    
+                    <button class="control-btn prev-next-btn" onclick="previousTrack()" title="Previous">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M3.3 1a.7.7 0 01.7.7v5.15l9.95-5.744a.7.7 0 011.05.606v12.588a.7.7 0 01-1.05.606L4 8.149V13.3a.7.7 0 01-.7.7H1.7a.7.7 0 01-.7-.7V1.7a.7.7 0 01.7-.7h1.6z"/>
+                        </svg>
+                    </button>
+                    
+                    <button class="control-btn play-pause-btn" onclick="togglePlayPause()" title="${isPlaying ? 'Pause' : 'Play'}">
+                        ${isPlaying ? 
+                            '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2.7 1a.7.7 0 00-.7.7v12.6a.7.7 0 00.7.7h2.6a.7.7 0 00.7-.7V1.7a.7.7 0 00-.7-.7H2.7zm8 0a.7.7 0 00-.7.7v12.6a.7.7 0 00.7.7h2.6a.7.7 0 00.7-.7V1.7a.7.7 0 00-.7-.7h-2.6z"/></svg>' :
+                            '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="m2.7 1.7-.7.7v12.6l.7.7h2.6l.7-.7V1.7L5.3 1H2.7zm8 0-.7.7v12.6l.7.7h2.6l.7-.7V1.7L13.3 1h-2.6z"/></svg>'
+                        }
+                    </button>
+                    
+                    <button class="control-btn prev-next-btn" onclick="nextTrack()" title="Next">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M12.7 1a.7.7 0 00-.7.7v5.15L2.05 1.107A.7.7 0 001 1.712v12.588a.7.7 0 001.05.606L12 9.149V13.3a.7.7 0 00.7.7h1.6a.7.7 0 00.7-.7V1.7a.7.7 0 00-.7-.7h-1.6z"/>
+                        </svg>
+                    </button>
+                    
+                    <button class="control-btn shuffle-repeat-btn" onclick="toggleRepeat()" title="Repeat">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M0 4.75A3.75 3.75 0 013.75 1h8.5A3.75 3.75 0 0116 4.75v5a3.75 3.75 0 01-3.75 3.75H9.81l1.018 1.018a.75.75 0 11-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 111.06 1.06L9.811 12h2.439A2.25 2.25 0 0014.5 9.75v-5a2.25 2.25 0 00-2.25-2.25h-8.5A2.25 2.25 0 001.5 4.75v5A2.25 2.25 0 003.75 12H5v1.5H3.75A3.75 3.75 0 010 9.75v-5z"/>
+                        </svg>
+                    </button>
                 </div>`;
+        }
+
+        function generatePlaceholderArt() {
+            return "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'><defs><linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%23282828'/><stop offset='100%' style='stop-color:%23181818'/></linearGradient></defs><rect width='140' height='140' fill='url(%23grad)'/><circle cx='70' cy='70' r='25' fill='%23535353'/><circle cx='70' cy='70' r='8' fill='%23b3b3b3'/></svg>";
         }
 
         function formatTime(seconds) {
@@ -260,68 +463,105 @@
         }
 
         function togglePlayPause() {
-            // Replace with actual Spotify API call
-            isPlaying = !isPlaying;
             fetch('/api/play-pause', {
-                method: 'POST'
-            });
-            updateDisplay(currentTrack);
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        isPlaying = !isPlaying;
+                        updateDisplay(currentTrack);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
         }
 
         function nextTrack() {
-            // Replace with actual Spotify API call
             fetch('/api/next', {
-                method: 'POST'
-            });
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .catch(error => console.error('Error:', error));
         }
 
         function previousTrack() {
-            // Replace with actual Spotify API call
             fetch('/api/previous', {
-                method: 'POST'
-            });
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .catch(error => console.error('Error:', error));
         }
 
-        // Simulate progress updates
+        function toggleShuffle() {
+            // Add shuffle functionality
+            console.log('Shuffle toggled');
+        }
+
+        function toggleRepeat() {
+            // Add repeat functionality
+            console.log('Repeat toggled');
+        }
+
+        function seekToPosition(event) {
+            const rect = event.target.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const percentage = clickX / rect.width;
+            const newPosition = Math.floor(duration * percentage);
+
+            // Add seek functionality
+            console.log('Seek to:', newPosition);
+        }
+
+        // Update progress every second
         setInterval(() => {
-            if (isPlaying && currentTrack) {
+            if (isPlaying && currentTrack && currentTrack.track_name) {
                 progress += 1;
                 if (progress >= duration) {
-                    progress = 0;
+                    // Track ended, fetch new data
+                    fetchCurrentTrack();
+                } else {
+                    updateDisplay(currentTrack);
                 }
-                updateDisplay(currentTrack);
             }
         }, 1000);
 
-        // Fetch current track data every 5 seconds
-        setInterval(async() => {
+        // Fetch current track data
+        async function fetchCurrentTrack() {
             try {
                 const response = await fetch('/api/current-track');
                 const data = await response.json();
+
+                updateConnectionStatus(true);
+
                 if (data.track) {
-                    currentTrack = data.track;
+                    currentTrack = {
+                        track_name: data.track.title,
+                        artist_string: data.track.artist,
+                        album_art_url: data.track.albumArt,
+                        album_name: data.track.album || ''
+                    };
                     isPlaying = data.is_playing;
                     progress = data.progress;
                     duration = data.duration;
-                    updateDisplay(currentTrack);
+                } else {
+                    currentTrack = null;
+                    isPlaying = false;
+                    progress = 0;
+                    duration = 0;
                 }
+
+                updateDisplay(currentTrack);
             } catch (error) {
                 console.error('Error fetching track data:', error);
+                updateConnectionStatus(false);
+                currentTrack = null;
+                updateDisplay(null);
             }
-        }, 5000);
+        }
 
-        // Test with mock data
-        setTimeout(() => {
-            currentTrack = {
-                title: "Sample Song Title That Might Be Long",
-                artist: "Sample Artist Name",
-                albumArt: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='110' height='110' viewBox='0 0 110 110'><rect width='110' height='110' fill='%23222' stroke='%23555'/><text x='55' y='55' text-anchor='middle' fill='%23999' font-size='12'>♫</text></svg>"
-            };
-            isPlaying = true;
-            progress = 45;
-            duration = 180;
-            updateDisplay(currentTrack);
-        }, 2000);
+        // Initial load and periodic updates
+        fetchCurrentTrack();
+        setInterval(fetchCurrentTrack, 3000);
     </script>
 </body>
 
