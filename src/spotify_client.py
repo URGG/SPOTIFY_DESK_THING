@@ -12,11 +12,12 @@ from typing import Optional, Dict, Any
 logger = logging.getLogger(__name__)
 
 class SpotifyClient:
-    def __init__(self, client_id: str, client_secret: str, redirect_uri: str):
+    def __init__(self, client_id: str = None, client_secret: str = None, redirect_uri: str = None):
         """Initialize Spotify client with credentials"""
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.redirect_uri = redirect_uri
+        # Use provided parameters or fallback to hardcoded values
+        self.client_id = client_id or "8e0223def76a4e1cbc6374269641065b"  # Fixed: removed trailing comma
+        self.client_secret = client_secret or "10678f8dd9b34f3fb09b3a2c680d77aa"  # Fixed: removed trailing comma
+        self.redirect_uri = redirect_uri or "http://127.0.0.1:8080/callback"
         
         # Spotify scopes needed
         self.scope = "user-read-currently-playing user-read-playback-state user-modify-playback-state"
@@ -54,6 +55,22 @@ class SpotifyClient:
             if self._last_track_data and (time.time() - self._last_fetch_time) < 30:
                 return self._last_track_data
             return self._format_error_response(str(e))
+    
+    def get_current_user(self):
+        """Get current user information"""
+        try:
+            return self.sp.current_user()
+        except Exception as e:
+            logger.error(f"Error getting current user: {e}")
+            return None
+
+    def get_playback_state(self):
+        """Get current playback state"""
+        try:
+            return self.sp.current_playback()
+        except Exception as e:
+            logger.error(f"Error getting playback state: {e}")
+            return None
     
     def _format_track_data(self, current_track: Dict) -> Dict[str, Any]:
         """Format raw Spotify data into clean structure"""
@@ -114,7 +131,7 @@ class SpotifyClient:
             if current and current['is_playing']:
                 self.sp.pause_playback()
             else:
-                self.sp.start_playbook()
+                self.sp.start_playback()  # Fixed: was start_playbook()
             return True
         except Exception as e:
             logger.error(f"Error toggling play/pause: {e}")

@@ -10,11 +10,14 @@ class LCDDisplayController:
         self.baud_rate = baud_rate
         self.ser = None
         self.connected = False
+        self.width = 1024
+        self.height = 600
         
     def connect(self):
         """Connect to the LCD display"""
         try:
             self.ser = serial.Serial(self.port, self.baud_rate, timeout=1)
+            time.sleep(2)  # Give time for connection to stabilize
             self.connected = True
             print(f"✅ Connected to display on {self.port}")
             return True
@@ -29,317 +32,330 @@ class LCDDisplayController:
             self.connected = False
             print("Disconnected from display")
     
-    def send_image(self, img, method=1):
-        """Send image to display with different methods"""
+    def send_image(self, img):
+        """Main image sending method - tries optimized RGB565 first, falls back to line-by-line"""
+        if not self.connected or not self.ser:
+            print("❌ Display not connected")
+            return False
+        
+        # Try RGB565 method first (usually faster)
+        success = self.send_image_rgb565_optimized(img)
+        
+        if success:
+            return True
+        
+        # If RGB565 failed, try line-by-line method
+        print("🔄 RGB565 failed, trying line-by-line method...")
+        return self.send_image_line_by_line(img)
+    
+    def send_image_rgb565_optimized(self, img):
+        """Optimized RGB565 method with better timing"""
         if not self.connected or not self.ser:
             print("❌ Display not connected")
             return False
         
         try:
-            if method == 1:
-                # Method 1: Raw RGB565 (common for LCD displays)
-                print("📤 Trying RGB565 format")
-                img_rgb = img.convert('RGB')
-                pixels = list(img_rgb.getdata())
+            print("📤 Sending RGB565 format (optimized)")
+            img_rgb = img.convert('RGB').resize((self.width, self.height))
+            
+            # Clear any existing buffer
+            self.ser.reset_input_buffer()
+            self.ser.reset_output_buffer()
+            
+            # Send header with sync pattern
+            header = bytearray()
+            header.extend(b'\xFF\xFF\xFF\xFF')  # Sync pattern
+            header.extend(b'\xAA\xBB')  # Start marker
+            header.extend(self.width.to_bytes(2, byteorder='little'))
+            header.extend(self.height.to_bytes(2, byteorder='little'))
+            header.extend(b'\x01')  # RGB565 format flag
+            
+            self.ser.write(header)
+            time.sleep(0.01)  # Small delay after header
+            
+            # Convert to RGB565 in chunks to avoid memory issues
+            chunk_size = 1024  # Process 1024 pixels at a time
+            pixels = list(img_rgb.getdata())
+            
+            for i in range(0, len(pixels), chunk_size):
+                chunk = pixels[i:i + chunk_size]
+                rgb565_chunk = bytearray()
                 
-                rgb565_data = bytearray()
-                for r, g, b in pixels:
-                    # Convert to RGB565
-                    r565 = (r >> 3) << 11
-                    g565 = (g >> 2) << 5
-                    b565 = b >> 3
+                for r, g, b in chunk:
+                    # Convert to RGB565 with proper bit shifting
+                    r565 = (r & 0xF8) << 8   # 5 bits for red
+                    g565 = (g & 0xFC) << 3   # 6 bits for green  
+                    b565 = (b & 0xF8) >> 3   # 5 bits for blue
                     rgb565 = r565 | g565 | b565
-                    rgb565_data.extend(rgb565.to_bytes(2, byteorder='little'))
-                
-                # Send dimension header + data
-                header = bytearray()
-                header.extend(b'\xAA\xBB')  # Start marker
-                header.extend((1024).to_bytes(2, byteorder='little'))
-                header.extend((600).to_bytes(2, byteorder='little'))
-                
-                self.ser.write(header)
-                self.ser.write(rgb565_data)
-                
-            elif method == 2:
-                # Method 2: Raw RGB888 with proper header
-                print("📤 Trying RGB888 with header")
-                img_rgb = img.convert('RGB')
-                img_bytes = img_rgb.tobytes()
-                
-                header = bytearray()
-                header.extend(b'\xFF\xD8')  # JPEG start marker
-                header.extend((1024).to_bytes(4, byteorder='little'))
-                header.extend((600).to_bytes(4, byteorder='little'))
-                header.extend((3).to_bytes(1))  # 3 bytes per pixel
-                
-                self.ser.write(header)
-                self.ser.write(img_bytes)
-                
-            elif method == 3:
-                # Method 3: BMP format
-                print("📤 Trying BMP format")
-                buffer = io.BytesIO()
-                img_rgb = img.convert('RGB')
-                img_rgb.save(buffer, format='BMP')
-                bmp_data = buffer.getvalue()
-                
-                self.ser.write(b'BM')
-                self.ser.write(bmp_data[2:])
-                
-            elif method == 4:
-                # Method 4: Line-by-line RGB
-                print("📤 Trying line-by-line RGB")
-                img_rgb = img.convert('RGB')
-                
-                # Send header
-                self.ser.write(b'\x12\x34')
-                self.ser.write((1024).to_bytes(2, byteorder='little'))
-                self.ser.write((600).to_bytes(2, byteorder='little'))
-                
-                # Send line by line
-                for y in range(600):
-                    line_data = bytearray()
-                    for x in range(1024):
-                        pixel = img_rgb.getpixel((x, y))
-                        line_data.extend(pixel)
                     
-                    self.ser.write(b'\xAA')
-                    self.ser.write(y.to_bytes(2, byteorder='little'))
-                    self.ser.write(line_data)
-                    time.sleep(0.001)
-                    
-            elif method == 5:
-                # Method 5: JPEG with commands
-                print("📤 Trying JPEG with display command")
-                buffer = io.BytesIO()
-                img.save(buffer, format='JPEG', quality=95)
-                img_bytes = buffer.getvalue()
+                    # Send as little endian
+                    rgb565_chunk.extend(rgb565.to_bytes(2, byteorder='little'))
                 
-                commands = [b'\x55\xAA\x01\x02', b'\xFF\xFE\xFD\xFC', b'\x00\x01\x02\x03']
-                
-                for cmd in commands:
-                    self.ser.write(cmd)
-                    self.ser.write(len(img_bytes).to_bytes(4, byteorder='little'))
-                    self.ser.write(img_bytes)
-                    time.sleep(0.1)
-                    
-            print(f"📤 Sent data using method {method}")
+                self.ser.write(rgb565_chunk)
+                time.sleep(0.001)  # Tiny delay between chunks
+            
+            # Send end marker
+            self.ser.write(b'\xCC\xDD')
+            print("✅ Image sent successfully")
             return True
             
         except Exception as e:
             print(f"❌ Error sending image: {e}")
             return False
     
-    def create_spotify_dashboard(self, track_info=None):
-        """Create a Spotify-styled dashboard image"""
-        img = Image.new('RGB', (1024, 600), color=(18, 18, 18))
-        draw = ImageDraw.Draw(img)
+    def send_image_line_by_line(self, img):
+        """Send image line by line - often more reliable"""
+        if not self.connected or not self.ser:
+            print("❌ Display not connected")
+            return False
         
         try:
-            font_title = ImageFont.truetype("arial.ttf", 36)
-            font_large = ImageFont.truetype("arial.ttf", 48)
-            font_medium = ImageFont.truetype("arial.ttf", 28)
-            font_small = ImageFont.truetype("arial.ttf", 20)
-        except:
-            font_title = font_large = font_medium = font_small = ImageFont.load_default()
+            print("📤 Sending line-by-line format")
+            img_rgb = img.convert('RGB').resize((self.width, self.height))
+            
+            # Clear buffers
+            self.ser.reset_input_buffer()
+            self.ser.reset_output_buffer()
+            
+            # Send header
+            header = bytearray()
+            header.extend(b'\xFF\xFF\xFF\xFF')  # Sync
+            header.extend(b'\x12\x34')  # Line mode marker
+            header.extend(self.width.to_bytes(2, byteorder='little'))
+            header.extend(self.height.to_bytes(2, byteorder='little'))
+            
+            self.ser.write(header)
+            time.sleep(0.01)
+            
+            # Send line by line
+            for y in range(self.height):
+                # Line header
+                line_header = bytearray()
+                line_header.extend(b'\xAA')  # Line start marker
+                line_header.extend(y.to_bytes(2, byteorder='little'))
+                line_header.extend(self.width.to_bytes(2, byteorder='little'))
+                
+                self.ser.write(line_header)
+                
+                # Line data (RGB888)
+                line_data = bytearray()
+                for x in range(self.width):
+                    pixel = img_rgb.getpixel((x, y))
+                    line_data.extend(pixel)
+                
+                self.ser.write(line_data)
+                
+                # Small delay every 10 lines to prevent buffer overflow
+                if y % 10 == 0:
+                    time.sleep(0.001)
+                    
+            # End marker
+            self.ser.write(b'\xBB\xCC')
+            print("✅ Line-by-line sent successfully")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error sending line-by-line: {e}")
+            return False
+    
+    def create_simple_test_image(self, test_type="rectangles"):
+        """Create simple test images for debugging"""
+        img = Image.new('RGB', (self.width, self.height), color=(0, 0, 0))
+        draw = ImageDraw.Draw(img)
         
-        spotify_green = (30, 215, 96)
-        white = (255, 255, 255)
-        gray = (180, 180, 180)
+        if test_type == "rectangles":
+            # Simple colored rectangles
+            colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0)]
+            rect_width = self.width // 2
+            rect_height = self.height // 2
+            
+            positions = [(0, 0), (rect_width, 0), (0, rect_height), (rect_width, rect_height)]
+            
+            for i, (color, pos) in enumerate(zip(colors, positions)):
+                x, y = pos
+                draw.rectangle((x, y, x + rect_width, y + rect_height), fill=color)
         
-        draw.text((40, 30), "♪ SPOTIFY", fill=spotify_green, font=font_title)
+        elif test_type == "gradient":
+            # Horizontal gradient
+            for x in range(self.width):
+                color_val = int(255 * x / self.width)
+                for y in range(self.height):
+                    draw.point((x, y), fill=(color_val, color_val, color_val))
         
-        if track_info:
-            draw.text((40, 120), "Now Playing", fill=gray, font=font_medium)
-            song_name = track_info.get('name', 'Unknown Track')[:40]
-            draw.text((40, 180), song_name, fill=white, font=font_large)
-            artist_name = track_info.get('artist', 'Unknown Artist')[:50]
-            draw.text((40, 240), artist_name, fill=gray, font=font_medium)
-        else:
-            draw.text((40, 200), "No track playing", fill=gray, font=font_large)
-            draw.text((40, 260), "Start Spotify and play a song", fill=gray, font=font_medium)
+        elif test_type == "checkerboard":
+            # Checkerboard pattern
+            square_size = 32
+            for x in range(0, self.width, square_size):
+                for y in range(0, self.height, square_size):
+                    if (x // square_size + y // square_size) % 2:
+                        color = (255, 255, 255)
+                    else:
+                        color = (0, 0, 0)
+                    draw.rectangle((x, y, x + square_size, y + square_size), fill=color)
+        
+        elif test_type == "stripes":
+            # Vertical stripes
+            stripe_width = 20
+            colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
+            
+            for x in range(0, self.width, stripe_width):
+                color = colors[(x // stripe_width) % len(colors)]
+                draw.rectangle((x, 0, x + stripe_width, self.height), fill=color)
         
         return img
-
-def test_simple_colors():
-    """Test with simple solid colors"""
-    display = LCDDisplayController()
-    if display.connect():
-        colors = [
-            (255, 0, 0),    # Red
-            (0, 255, 0),    # Green  
-            (0, 0, 255),    # Blue
-            (255, 255, 255), # White
-            (0, 0, 0),      # Black
-        ]
-        
-        for i, color in enumerate(colors):
-            img = Image.new('RGB', (1024, 600), color=color)
-            color_name = ['Red', 'Green', 'Blue', 'White', 'Black'][i]
-            print(f"🎨 Sending {color_name} screen...")
-            
-            display.send_image(img, method=1)
-            
-            input(f"Do you see {color_name} on the LCD? Press Enter for next color...")
-            
-        display.disconnect()
-
-def test_all_methods():
-    """Test all different methods"""
-    display = LCDDisplayController()
-    if display.connect():
-        # Create simple test image
-        img = Image.new('RGB', (1024, 600), color=(255, 0, 0))  # Red background
-        draw = ImageDraw.Draw(img)
-        draw.rectangle((100, 100, 924, 500), fill=(0, 255, 0))  # Green rectangle
-        draw.rectangle((200, 200, 824, 400), fill=(0, 0, 255))  # Blue rectangle
-        
-        for method in range(1, 6):
-            print(f"\n🔄 Testing Method {method}...")
-            display.send_image(img, method=method)
-            
-            response = input(f"Check LCD: Do you see colored rectangles? (y/n/better/worse): ")
-            if response.lower() == 'y':
-                print(f"✅ Method {method} works!")
-                break
-                
-        display.disconnect()
-
-def test_color_refinement():
-    """Test colors with better RGB565 conversion"""
-    display = LCDDisplayController()
-    if display.connect():
-        colors = [
-            (255, 0, 0),    # Pure Red
-            (0, 255, 0),    # Pure Green  
-            (0, 0, 255),    # Pure Blue
-            (255, 255, 0),  # Yellow
-            (255, 0, 255),  # Magenta
-            (0, 255, 255),  # Cyan
-            (255, 255, 255), # White
-            (128, 128, 128), # Gray
-            (0, 0, 0),      # Black
-        ]
-        
-        for i, color in enumerate(colors):
-            img = Image.new('RGB', (1024, 600), color=color)
-            color_names = ['Red', 'Green', 'Blue', 'Yellow', 'Magenta', 'Cyan', 'White', 'Gray', 'Black']
-            print(f"🎨 Sending {color_names[i]} screen...")
-            
-            display.send_image(img, method=1)
-            
-            response = input(f"What do you see? Expected: {color_names[i]} (describe what you actually see): ")
-            print(f"Result: {response}")
-            
-        display.disconnect()
-
-def test_simple_dashboard():
-    """Test simple geometric dashboard"""
-    display = LCDDisplayController()
-    if display.connect():
-        print("🎵 Testing SIMPLE geometric dashboard...")
-        
-        mock_track = {
-            'name': 'Bohemian Rhapsody',
-            'artist': 'Queen', 
-            'progress_ms': 120000,
-            'duration_ms': 300000,
-            'is_playing': True
-        }
-        
-        # Try geometric version first
-        simple_img = display.create_simple_spotify_dashboard(mock_track)
-        display.send_image(simple_img, method=1)
-        
-        print("You should see colored rectangles:")
-        print("- Green bar at top (header)")
-        print("- White rectangle (song info)")
-        print("- Blue rectangle (more info)")  
-        print("- Red rectangle (artist)")
-        print("- Progress bar at bottom")
-        print("- Green square (playing indicator)")
-        
-        response = input("Do you see colored rectangles instead of lines? (y/n): ")
-        
-        if response.lower() == 'y':
-            print("✅ Simple dashboard works! Now trying pixel-perfect version...")
-            
-            # Try pixel-perfect version with text
-            pixel_img = display.create_pixel_perfect_spotify(mock_track)
-            display.send_image(pixel_img, method=1)
-            
-            print("Now you should see:")
-            print("- Green SPOTIFY header")
-            print("- White song name section")
-            print("- Gray artist section") 
-            print("- Progress bar")
-            print("- Status indicator")
-            
-            input("Do you see text and sections clearly? Press Enter...")
-        
-        display.disconnect()
-
-def test_progression():
-    """Test progression from simple to complex"""
-    display = LCDDisplayController()
-    if display.connect():
-        
-        # Test 1: Pure geometric
-        print("📊 Test 1: Pure geometric shapes")
-        img1 = Image.new('RGB', (1024, 600), color=(0, 0, 0))
-        draw = ImageDraw.Draw(img1)
-        draw.rectangle((100, 100, 500, 200), fill=(255, 0, 0))
-        draw.rectangle((100, 300, 500, 400), fill=(0, 255, 0))
-        display.send_image(img1, method=1)
-        input("See red and green rectangles? Press Enter...")
-        
-        # Test 2: Add simple text
-        print("📊 Test 2: Add simple text")
-        img2 = Image.new('RGB', (1024, 600), color=(0, 0, 0))
-        draw = ImageDraw.Draw(img2)
-        draw.rectangle((100, 100, 900, 200), fill=(255, 255, 255))
-        font = ImageFont.load_default()
-        draw.text((120, 130), "SPOTIFY DASHBOARD TEST", fill=(0, 0, 0), font=font)
-        display.send_image(img2, method=1)
-        input("See white rectangle with black text? Press Enter...")
-        
-        # Test 3: Full simple dashboard
-        print("📊 Test 3: Simple dashboard")
-        mock_data = {'name': 'Test Song', 'artist': 'Test Artist', 'is_playing': True, 'progress_ms': 60000, 'duration_ms': 180000}
-        img3 = display.create_pixel_perfect_spotify(mock_data)
-        display.send_image(img3, method=1)
-        input("See full dashboard? Press Enter...")
-        
-        display.disconnect()
-
-def create_test_pattern():
-    """Create a test pattern to verify colors work correctly"""
-    display = LCDDisplayController()
-    if display.connect():
-        # Create a test pattern image
-        img = Image.new('RGB', (1024, 600), color=(0, 0, 0))  # Black background
+    
+    def create_text_test_image(self, text="LCD TEST"):
+        """Create image with text for testing"""
+        img = Image.new('RGB', (self.width, self.height), color=(0, 0, 0))
         draw = ImageDraw.Draw(img)
         
-        # Color bars
-        colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255), (255,255,255)]
-        bar_width = 1024 // len(colors)
+        # Try to load a font
+        try:
+            font_large = ImageFont.truetype("arial.ttf", 72)
+            font_medium = ImageFont.truetype("arial.ttf", 36)
+        except:
+            font_large = ImageFont.load_default()
+            font_medium = ImageFont.load_default()
+        
+        # Background rectangle
+        draw.rectangle((50, 50, self.width-50, self.height-50), fill=(50, 50, 50))
+        
+        # Title
+        draw.text((100, 100), text, fill=(255, 255, 255), font=font_large)
+        
+        # Status info
+        draw.text((100, 200), f"Resolution: {self.width}x{self.height}", fill=(150, 150, 150), font=font_medium)
+        draw.text((100, 250), "RGB888 Format", fill=(150, 150, 150), font=font_medium)
+        draw.text((100, 300), "Serial Connection", fill=(0, 255, 0), font=font_medium)
+        
+        # Color bars at bottom
+        bar_height = 50
+        colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
+        bar_width = self.width // len(colors)
         
         for i, color in enumerate(colors):
             x1 = i * bar_width
             x2 = (i + 1) * bar_width
-            draw.rectangle((x1, 0, x2, 600), fill=color)
+            draw.rectangle((x1, self.height - bar_height, x2, self.height), fill=color)
         
-        # Add text
-        try:
-            font = ImageFont.truetype("arial.ttf", 48)
-        except:
-            font = ImageFont.load_default()
+        return img
+
+def progressive_test():
+    """Progressive testing from simple to complex"""
+    display = LCDDisplayController()
+    
+    if not display.connect():
+        print("❌ Could not connect to display")
+        return
+    
+    tests = [
+        ("Solid Red", lambda: Image.new('RGB', (1024, 600), color=(255, 0, 0))),
+        ("Solid Green", lambda: Image.new('RGB', (1024, 600), color=(0, 255, 0))),
+        ("Solid Blue", lambda: Image.new('RGB', (1024, 600), color=(0, 0, 255))),
+        ("Four Rectangles", lambda: display.create_simple_test_image("rectangles")),
+        ("Vertical Stripes", lambda: display.create_simple_test_image("stripes")),
+        ("Checkerboard", lambda: display.create_simple_test_image("checkerboard")),
+        ("Text Test", lambda: display.create_text_test_image()),
+        ("Gradient", lambda: display.create_simple_test_image("gradient")),
+    ]
+    
+    for test_name, image_func in tests:
+        print(f"\n🔍 Testing: {test_name}")
+        img = image_func()
+        
+        # Try RGB565 method first
+        print("  Trying RGB565 method...")
+        success1 = display.send_image_rgb565_optimized(img)
+        
+        response = input(f"  RGB565 - What do you see? (good/lines/nothing/other): ").lower()
+        
+        if response == "good":
+            print(f"  ✅ RGB565 works for {test_name}")
+            continue
+        elif response in ["lines", "nothing", "other"]:
+            print("  ❌ RGB565 failed, trying line-by-line...")
             
-        draw.text((50, 300), "COLOR TEST", fill=(0, 0, 0), font=font)
+            # Try line-by-line method
+            success2 = display.send_image_line_by_line(img)
+            response2 = input(f"  Line-by-line - What do you see? (good/lines/nothing/other): ").lower()
+            
+            if response2 == "good":
+                print(f"  ✅ Line-by-line works for {test_name}")
+            else:
+                print(f"  ❌ Both methods failed for {test_name}")
+                print(f"    This suggests the issue starts at complexity level: {test_name}")
+                
+                user_continue = input("  Continue testing? (y/n): ").lower()
+                if user_continue != 'y':
+                    break
+    
+    display.disconnect()
+
+def debug_data_transmission():
+    """Debug the actual data being sent"""
+    display = LCDDisplayController()
+    
+    if not display.connect():
+        return
+    
+    # Create a very simple image - just 4 pixels
+    print("🔍 Testing minimal data transmission...")
+    
+    # 2x2 pixel image
+    simple_img = Image.new('RGB', (2, 2), color=(0, 0, 0))
+    simple_img.putpixel((0, 0), (255, 0, 0))    # Red
+    simple_img.putpixel((1, 0), (0, 255, 0))    # Green
+    simple_img.putpixel((0, 1), (0, 0, 255))    # Blue  
+    simple_img.putpixel((1, 1), (255, 255, 255)) # White
+    
+    # Scale it up to full resolution
+    scaled_img = simple_img.resize((1024, 600), Image.NEAREST)
+    
+    print("Sending 2x2 pattern scaled up (should show 4 large colored squares)")
+    display.send_image_rgb565_optimized(scaled_img)
+    
+    input("What do you see? This should be very simple data. Press Enter...")
+    
+    display.disconnect()
+
+if __name__ == "__main__":
+    print("🖥️  LCD Display Testing Suite")
+    print("=" * 50)
+    
+    while True:
+        print("\nChoose a test:")
+        print("1. Progressive Test (recommended)")
+        print("2. Debug Minimal Data")  
+        print("3. Quick Color Test")
+        print("4. Custom Port/Baud")
+        print("5. Exit")
         
-        print("🌈 Sending color test pattern...")
-        display.send_image(img, method=1)
+        choice = input("Enter choice (1-5): ").strip()
         
-        print("You should see vertical color bars: Red, Green, Blue, Yellow, Magenta, Cyan, White")
-        input("What do you see? Press Enter...")
-        display.disconnect()
+        if choice == "1":
+            progressive_test()
+        elif choice == "2":
+            debug_data_transmission()
+        elif choice == "3":
+            display = LCDDisplayController()
+            if display.connect():
+                img = display.create_simple_test_image("rectangles")
+                display.send_image_rgb565_optimized(img)
+                input("Check display and press Enter...")
+                display.disconnect()
+        elif choice == "4":
+            port = input("Enter COM port (e.g., COM3): ").strip()
+            baud = int(input("Enter baud rate (e.g., 115200): ").strip())
+            display = LCDDisplayController(port, baud)
+            # Run progressive test with custom settings
+            if display.connect():
+                img = display.create_simple_test_image("rectangles")
+                display.send_image_rgb565_optimized(img)
+                input("Check display and press Enter...")
+                display.disconnect()
+        elif choice == "5":
+            break
+        else:
+            print("Invalid choice")
+            
+    print("👋 Testing complete!")
