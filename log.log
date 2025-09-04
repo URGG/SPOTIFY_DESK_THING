@@ -52,3 +52,121 @@
 9/4/2025 11:17:57 AM [DEBUG] Auto detected COM port: COM3
 9/4/2025 11:19:17 AM [DEBUG] HW revision: A
 9/4/2025 11:19:17 AM [DEBUG] Auto detected COM port: COM3
+9/4/2025 11:28:50 AM [DEBUG] HW revision: A
+9/4/2025 11:28:50 AM [DEBUG] Auto detected COM port: COM3
+9/4/2025 11:28:50 AM [INFO] Display reset (COM port may change)...
+9/4/2025 11:28:55 AM [DEBUG] Static COM port: COM3
+9/4/2025 11:32:14 AM [DEBUG] HW revision: A
+9/4/2025 11:32:14 AM [DEBUG] Auto detected COM port: COM3
+9/4/2025 11:32:14 AM [INFO] Display reset (COM port may change)...
+9/4/2025 11:32:19 AM [DEBUG] Static COM port: COM3
+9/4/2025 11:32:56 AM [INFO] Loading theme 3.5inchTheme2 from res\themes\3.5inchTheme2\theme.yaml
+9/4/2025 11:32:56 AM [WARNING] Cannot find valid DISPLAY_SIZE property in selected theme 3.5inchTheme2, defaulting to 3.5"
+9/4/2025 11:32:56 AM [DEBUG] HW revision: A
+9/4/2025 11:32:56 AM [DEBUG] Auto detected COM port: COM3
+9/4/2025 11:32:56 AM [INFO] Display reset (COM port may change)...
+9/4/2025 11:33:02 AM [DEBUG] Static COM port: COM3
+9/4/2025 11:33:02 AM [DEBUG] HW sub-revision: SubRevision.USBMONITOR_3_5
+9/4/2025 11:33:16 AM [DEBUG] HW revision: A
+9/4/2025 11:33:16 AM [DEBUG] Auto detected COM port: COM3
+9/4/2025 11:33:39 AM [ERROR] SerialException: Failed to send serial data to device. Closing and reopening COM port before retrying once.
+9/4/2025 11:33:40 AM [DEBUG] Static COM port: COM3
+9/4/2025 11:33:50 AM [DEBUG] HW revision: A
+9/4/2025 11:33:50 AM [DEBUG] Auto detected COM port: COM3
+9/4/2025 11:50:57 AM [DEBUG] HW revision: A
+9/4/2025 11:50:57 AM [DEBUG] Auto detected COM port: COM3
+9/4/2025 11:52:08 AM [DEBUG] HW revision: A
+9/4/2025 11:52:08 AM [DEBUG] Auto detected COM port: COM3
+9/4/2025 11:52:08 AM [INFO] Display reset (COM port may change)...
+9/4/2025 11:52:13 AM [DEBUG] Static COM port: COM3
+9/4/2025 11:53:06 AM [DEBUG] HW revision: A
+9/4/2025 11:53:06 AM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:23:49 PM [DEBUG] HW revision: A
+9/4/2025 3:23:49 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:24:13 PM [DEBUG] HW revision: A
+9/4/2025 3:24:13 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:26:02 PM [DEBUG] HW revision: A
+9/4/2025 3:26:02 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:29:24 PM [DEBUG] HW revision: A
+9/4/2025 3:29:24 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:29:40 PM [DEBUG] HW revision: A
+9/4/2025 3:29:40 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:32:20 PM [DEBUG] HW revision: A
+9/4/2025 3:32:20 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:32:35 PM [DEBUG] HW revision: A
+9/4/2025 3:32:35 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:37:30 PM [DEBUG] HW revision: A
+9/4/2025 3:37:30 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:42:01 PM [DEBUG] HW revision: A
+9/4/2025 3:42:01 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:45:24 PM [DEBUG] HW revision: A
+9/4/2025 3:45:24 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:47:32 PM [DEBUG] HW revision: A
+9/4/2025 3:47:32 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [WARNING] (Write line) Too fast! Slow down!
+9/4/2025 3:47:43 PM [ERROR] SerialException: Failed to send serial data to device. Closing and reopening COM port before retrying once.
+9/4/2025 3:47:44 PM [DEBUG] Static COM port: COM3
+9/4/2025 3:47:44 PM [ERROR] Cannot open COM port COM3: could not open port 'COM3': FileNotFoundError(2, 'The system cannot find the file specified.', None, 2)
+9/4/2025 3:47:54 PM [DEBUG] HW revision: A
+9/4/2025 3:47:54 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:49:49 PM [DEBUG] HW revision: A
+9/4/2025 3:49:49 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:51:15 PM [DEBUG] HW revision: A
+9/4/2025 3:51:15 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:52:32 PM [DEBUG] HW revision: A
+9/4/2025 3:52:32 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:54:19 PM [DEBUG] HW revision: A
+9/4/2025 3:54:19 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 3:54:57 PM [DEBUG] HW revision: A
+9/4/2025 3:54:57 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 4:05:22 PM [DEBUG] HW revision: A
+9/4/2025 4:05:22 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 4:07:04 PM [DEBUG] HW revision: A
+9/4/2025 4:07:04 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 4:07:46 PM [ERROR] SerialException: Failed to send serial data to device. Closing and reopening COM port before retrying once.
+9/4/2025 4:07:47 PM [DEBUG] Static COM port: COM3
+9/4/2025 4:07:47 PM [ERROR] Cannot open COM port COM3: could not open port 'COM3': FileNotFoundError(2, 'The system cannot find the file specified.', None, 2)
+9/4/2025 4:07:52 PM [DEBUG] HW revision: A
+9/4/2025 4:07:52 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 4:09:03 PM [DEBUG] HW revision: A
+9/4/2025 4:09:03 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 4:10:56 PM [DEBUG] HW revision: A
+9/4/2025 4:10:56 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 4:13:49 PM [DEBUG] HW revision: A
+9/4/2025 4:13:49 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 4:16:50 PM [DEBUG] HW revision: A
+9/4/2025 4:16:50 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 4:18:48 PM [DEBUG] HW revision: A
+9/4/2025 4:18:48 PM [DEBUG] Auto detected COM port: COM3
+9/4/2025 4:19:02 PM [DEBUG] HW revision: A
+9/4/2025 4:19:02 PM [DEBUG] Auto detected COM port: COM3

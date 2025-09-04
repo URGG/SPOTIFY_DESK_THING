@@ -72,6 +72,10 @@ class SpotifyClient:
             logger.error(f"Error getting playback state: {e}")
             return None
     
+    def get_current_playback(self):
+        """Get current playback state (alias for get_playback_state)"""
+        return self.get_playback_state()
+    
     def _format_track_data(self, current_track: Dict) -> Dict[str, Any]:
         """Format raw Spotify data into clean structure"""
         item = current_track['item']
