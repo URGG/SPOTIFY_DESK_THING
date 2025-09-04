@@ -1,361 +1,467 @@
-import serial
-import time
+import os
+import requests
 from PIL import Image, ImageDraw, ImageFont
-import io
-import threading
+from io import BytesIO
+import time
 
-class LCDDisplayController:
-    def __init__(self, port='COM3', baud_rate=115200):
-        self.port = port
-        self.baud_rate = baud_rate
-        self.ser = None
-        self.connected = False
-        self.width = 1024
-        self.height = 600
-        
-    def connect(self):
-        """Connect to the LCD display"""
-        try:
-            self.ser = serial.Serial(self.port, self.baud_rate, timeout=1)
-            time.sleep(2)  # Give time for connection to stabilize
-            self.connected = True
-            print(f"✅ Connected to display on {self.port}")
-            return True
-        except Exception as e:
-            print(f"❌ Error connecting to display: {e}")
-            return False
+try:
+    import sys
+    import os
     
-    def disconnect(self):
-        """Disconnect from display"""
-        if self.ser and self.ser.is_open:
-            self.ser.close()
-            self.connected = False
-            print("Disconnected from display")
+    # Add the turing repo root to path (where main.py is)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    turing_root_path = os.path.join(current_dir, 'turing-smart-screen-python-main')
     
-    def send_image(self, img):
-        """Main image sending method - tries optimized RGB565 first, falls back to line-by-line"""
-        if not self.connected or not self.ser:
-            print("❌ Display not connected")
-            return False
-        
-        # Try RGB565 method first (usually faster)
-        success = self.send_image_rgb565_optimized(img)
-        
-        if success:
-            return True
-        
-        # If RGB565 failed, try line-by-line method
-        print("🔄 RGB565 failed, trying line-by-line method...")
-        return self.send_image_line_by_line(img)
+    if os.path.exists(turing_root_path):
+        sys.path.insert(0, turing_root_path)
     
-    def send_image_rgb565_optimized(self, img):
-        """Optimized RGB565 method with better timing"""
-        if not self.connected or not self.ser:
-            print("❌ Display not connected")
-            return False
-        
-        try:
-            print("📤 Sending RGB565 format (optimized)")
-            img_rgb = img.convert('RGB').resize((self.width, self.height))
-            
-            # Clear any existing buffer
-            self.ser.reset_input_buffer()
-            self.ser.reset_output_buffer()
-            
-            # Send header with sync pattern
-            header = bytearray()
-            header.extend(b'\xFF\xFF\xFF\xFF')  # Sync pattern
-            header.extend(b'\xAA\xBB')  # Start marker
-            header.extend(self.width.to_bytes(2, byteorder='little'))
-            header.extend(self.height.to_bytes(2, byteorder='little'))
-            header.extend(b'\x01')  # RGB565 format flag
-            
-            self.ser.write(header)
-            time.sleep(0.01)  # Small delay after header
-            
-            # Convert to RGB565 in chunks to avoid memory issues
-            chunk_size = 1024  # Process 1024 pixels at a time
-            pixels = list(img_rgb.getdata())
-            
-            for i in range(0, len(pixels), chunk_size):
-                chunk = pixels[i:i + chunk_size]
-                rgb565_chunk = bytearray()
-                
-                for r, g, b in chunk:
-                    # Convert to RGB565 with proper bit shifting
-                    r565 = (r & 0xF8) << 8   # 5 bits for red
-                    g565 = (g & 0xFC) << 3   # 6 bits for green  
-                    b565 = (b & 0xF8) >> 3   # 5 bits for blue
-                    rgb565 = r565 | g565 | b565
-                    
-                    # Send as little endian
-                    rgb565_chunk.extend(rgb565.to_bytes(2, byteorder='little'))
-                
-                self.ser.write(rgb565_chunk)
-                time.sleep(0.001)  # Tiny delay between chunks
-            
-            # Send end marker
-            self.ser.write(b'\xCC\xDD')
-            print("✅ Image sent successfully")
-            return True
-            
-        except Exception as e:
-            print(f"❌ Error sending image: {e}")
-            return False
+    # Import the display module like main.py does
+    from library.display import display
     
-    def send_image_line_by_line(self, img):
-        """Send image line by line - often more reliable"""
-        if not self.connected or not self.ser:
-            print("❌ Display not connected")
-            return False
-        
-        try:
-            print("📤 Sending line-by-line format")
-            img_rgb = img.convert('RGB').resize((self.width, self.height))
+    # Create a wrapper class that matches our interface
+    class TuringSmartScreen:
+        def __init__(self, display_type="3.5inch", orientation=0):
+            print(f"Initializing Turing Smart Screen: {display_type}")
             
-            # Clear buffers
-            self.ser.reset_input_buffer()
-            self.ser.reset_output_buffer()
+            # Initialize the display like main.py does
+            display.initialize_display()
             
-            # Send header
-            header = bytearray()
-            header.extend(b'\xFF\xFF\xFF\xFF')  # Sync
-            header.extend(b'\x12\x34')  # Line mode marker
-            header.extend(self.width.to_bytes(2, byteorder='little'))
-            header.extend(self.height.to_bytes(2, byteorder='little'))
+            self.display_type = display_type
+            self.orientation = orientation
             
-            self.ser.write(header)
-            time.sleep(0.01)
-            
-            # Send line by line
-            for y in range(self.height):
-                # Line header
-                line_header = bytearray()
-                line_header.extend(b'\xAA')  # Line start marker
-                line_header.extend(y.to_bytes(2, byteorder='little'))
-                line_header.extend(self.width.to_bytes(2, byteorder='little'))
-                
-                self.ser.write(line_header)
-                
-                # Line data (RGB888)
-                line_data = bytearray()
-                for x in range(self.width):
-                    pixel = img_rgb.getpixel((x, y))
-                    line_data.extend(pixel)
-                
-                self.ser.write(line_data)
-                
-                # Small delay every 10 lines to prevent buffer overflow
-                if y % 10 == 0:
-                    time.sleep(0.001)
-                    
-            # End marker
-            self.ser.write(b'\xBB\xCC')
-            print("✅ Line-by-line sent successfully")
-            return True
-            
-        except Exception as e:
-            print(f"❌ Error sending line-by-line: {e}")
-            return False
-    
-    def create_simple_test_image(self, test_type="rectangles"):
-        """Create simple test images for debugging"""
-        img = Image.new('RGB', (self.width, self.height), color=(0, 0, 0))
-        draw = ImageDraw.Draw(img)
-        
-        if test_type == "rectangles":
-            # Simple colored rectangles
-            colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0)]
-            rect_width = self.width // 2
-            rect_height = self.height // 2
-            
-            positions = [(0, 0), (rect_width, 0), (0, rect_height), (rect_width, rect_height)]
-            
-            for i, (color, pos) in enumerate(zip(colors, positions)):
-                x, y = pos
-                draw.rectangle((x, y, x + rect_width, y + rect_height), fill=color)
-        
-        elif test_type == "gradient":
-            # Horizontal gradient
-            for x in range(self.width):
-                color_val = int(255 * x / self.width)
-                for y in range(self.height):
-                    draw.point((x, y), fill=(color_val, color_val, color_val))
-        
-        elif test_type == "checkerboard":
-            # Checkerboard pattern
-            square_size = 32
-            for x in range(0, self.width, square_size):
-                for y in range(0, self.height, square_size):
-                    if (x // square_size + y // square_size) % 2:
-                        color = (255, 255, 255)
-                    else:
-                        color = (0, 0, 0)
-                    draw.rectangle((x, y, x + square_size, y + square_size), fill=color)
-        
-        elif test_type == "stripes":
-            # Vertical stripes
-            stripe_width = 20
-            colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
-            
-            for x in range(0, self.width, stripe_width):
-                color = colors[(x // stripe_width) % len(colors)]
-                draw.rectangle((x, 0, x + stripe_width, self.height), fill=color)
-        
-        return img
-    
-    def create_text_test_image(self, text="LCD TEST"):
-        """Create image with text for testing"""
-        img = Image.new('RGB', (self.width, self.height), color=(0, 0, 0))
-        draw = ImageDraw.Draw(img)
-        
-        # Try to load a font
-        try:
-            font_large = ImageFont.truetype("arial.ttf", 72)
-            font_medium = ImageFont.truetype("arial.ttf", 36)
-        except:
-            font_large = ImageFont.load_default()
-            font_medium = ImageFont.load_default()
-        
-        # Background rectangle
-        draw.rectangle((50, 50, self.width-50, self.height-50), fill=(50, 50, 50))
-        
-        # Title
-        draw.text((100, 100), text, fill=(255, 255, 255), font=font_large)
-        
-        # Status info
-        draw.text((100, 200), f"Resolution: {self.width}x{self.height}", fill=(150, 150, 150), font=font_medium)
-        draw.text((100, 250), "RGB888 Format", fill=(150, 150, 150), font=font_medium)
-        draw.text((100, 300), "Serial Connection", fill=(0, 255, 0), font=font_medium)
-        
-        # Color bars at bottom
-        bar_height = 50
-        colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
-        bar_width = self.width // len(colors)
-        
-        for i, color in enumerate(colors):
-            x1 = i * bar_width
-            x2 = (i + 1) * bar_width
-            draw.rectangle((x1, self.height - bar_height, x2, self.height), fill=color)
-        
-        return img
-
-def progressive_test():
-    """Progressive testing from simple to complex"""
-    display = LCDDisplayController()
-    
-    if not display.connect():
-        print("❌ Could not connect to display")
-        return
-    
-    tests = [
-        ("Solid Red", lambda: Image.new('RGB', (1024, 600), color=(255, 0, 0))),
-        ("Solid Green", lambda: Image.new('RGB', (1024, 600), color=(0, 255, 0))),
-        ("Solid Blue", lambda: Image.new('RGB', (1024, 600), color=(0, 0, 255))),
-        ("Four Rectangles", lambda: display.create_simple_test_image("rectangles")),
-        ("Vertical Stripes", lambda: display.create_simple_test_image("stripes")),
-        ("Checkerboard", lambda: display.create_simple_test_image("checkerboard")),
-        ("Text Test", lambda: display.create_text_test_image()),
-        ("Gradient", lambda: display.create_simple_test_image("gradient")),
-    ]
-    
-    for test_name, image_func in tests:
-        print(f"\n🔍 Testing: {test_name}")
-        img = image_func()
-        
-        # Try RGB565 method first
-        print("  Trying RGB565 method...")
-        success1 = display.send_image_rgb565_optimized(img)
-        
-        response = input(f"  RGB565 - What do you see? (good/lines/nothing/other): ").lower()
-        
-        if response == "good":
-            print(f"  ✅ RGB565 works for {test_name}")
-            continue
-        elif response in ["lines", "nothing", "other"]:
-            print("  ❌ RGB565 failed, trying line-by-line...")
-            
-            # Try line-by-line method
-            success2 = display.send_image_line_by_line(img)
-            response2 = input(f"  Line-by-line - What do you see? (good/lines/nothing/other): ").lower()
-            
-            if response2 == "good":
-                print(f"  ✅ Line-by-line works for {test_name}")
+            # Set dimensions based on display type
+            if display_type == "3.5inch":
+                self.width, self.height = 320, 480
+            elif display_type == "5inch":
+                self.width, self.height = 800, 480
+            elif display_type == "8.8inch":
+                self.width, self.height = 1920, 480
             else:
-                print(f"  ❌ Both methods failed for {test_name}")
-                print(f"    This suggests the issue starts at complexity level: {test_name}")
+                self.width, self.height = 320, 480
                 
-                user_continue = input("  Continue testing? (y/n): ").lower()
-                if user_continue != 'y':
-                    break
-    
-    display.disconnect()
-
-def debug_data_transmission():
-    """Debug the actual data being sent"""
-    display = LCDDisplayController()
-    
-    if not display.connect():
-        return
-    
-    # Create a very simple image - just 4 pixels
-    print("🔍 Testing minimal data transmission...")
-    
-    # 2x2 pixel image
-    simple_img = Image.new('RGB', (2, 2), color=(0, 0, 0))
-    simple_img.putpixel((0, 0), (255, 0, 0))    # Red
-    simple_img.putpixel((1, 0), (0, 255, 0))    # Green
-    simple_img.putpixel((0, 1), (0, 0, 255))    # Blue  
-    simple_img.putpixel((1, 1), (255, 255, 255)) # White
-    
-    # Scale it up to full resolution
-    scaled_img = simple_img.resize((1024, 600), Image.NEAREST)
-    
-    print("Sending 2x2 pattern scaled up (should show 4 large colored squares)")
-    display.send_image_rgb565_optimized(scaled_img)
-    
-    input("What do you see? This should be very simple data. Press Enter...")
-    
-    display.disconnect()
-
-if __name__ == "__main__":
-    print("🖥️  LCD Display Testing Suite")
-    print("=" * 50)
-    
-    while True:
-        print("\nChoose a test:")
-        print("1. Progressive Test (recommended)")
-        print("2. Debug Minimal Data")  
-        print("3. Quick Color Test")
-        print("4. Custom Port/Baud")
-        print("5. Exit")
-        
-        choice = input("Enter choice (1-5): ").strip()
-        
-        if choice == "1":
-            progressive_test()
-        elif choice == "2":
-            debug_data_transmission()
-        elif choice == "3":
-            display = LCDDisplayController()
-            if display.connect():
-                img = display.create_simple_test_image("rectangles")
-                display.send_image_rgb565_optimized(img)
-                input("Check display and press Enter...")
-                display.disconnect()
-        elif choice == "4":
-            port = input("Enter COM port (e.g., COM3): ").strip()
-            baud = int(input("Enter baud rate (e.g., 115200): ").strip())
-            display = LCDDisplayController(port, baud)
-            # Run progressive test with custom settings
-            if display.connect():
-                img = display.create_simple_test_image("rectangles")
-                display.send_image_rgb565_optimized(img)
-                input("Check display and press Enter...")
-                display.disconnect()
-        elif choice == "5":
-            break
-        else:
-            print("Invalid choice")
+        def get_dimensions(self):
+            return (self.width, self.height)
             
-    print("👋 Testing complete!")
+        def display_image(self, image):
+            """Send PIL image to the display"""
+            try:
+                # The display module has an 'lcd' attribute
+                if hasattr(display, 'lcd'):
+                    lcd = display.lcd
+                    
+                    # Ensure image is the right size
+                    width, height = image.size
+                    if width != self.width or height != self.height:
+                        image = image.resize((self.width, self.height), Image.Resampling.LANCZOS)
+                    
+                    # Try different methods to send the image to LCD
+                    if hasattr(lcd, 'DisplayPILImage'):
+                        lcd.DisplayPILImage(image, 0, 0)
+                        print("✅ Image sent to LCD display via DisplayPILImage!")
+                    elif hasattr(lcd, 'DisplayBitmap'):
+                        # Convert PIL to bitmap format
+                        image_rgb = image.convert('RGB')
+                        bitmap_data = image_rgb.tobytes()
+                        lcd.DisplayBitmap(bitmap_data, 0, 0, self.width, self.height)
+                        print("✅ Image sent to LCD display via DisplayBitmap!")
+                    elif hasattr(lcd, 'display_pil_image'):
+                        lcd.display_pil_image(image)
+                        print("✅ Image sent to LCD display!")
+                    else:
+                        # Show what methods are available on the LCD object
+                        available_methods = [method for method in dir(lcd) if not method.startswith('_') and 'display' in method.lower()]
+                        print(f"Available LCD methods with 'display': {available_methods}")
+                        
+                        all_methods = [method for method in dir(lcd) if not method.startswith('_')]
+                        print(f"All LCD methods: {all_methods}")
+                        
+                        # Try a generic method name
+                        if hasattr(lcd, 'send_image'):
+                            lcd.send_image(image)
+                            print("✅ Image sent via send_image!")
+                        else:
+                            raise AttributeError("No suitable display method found on LCD object")
+                else:
+                    raise AttributeError("No lcd attribute found in display module")
+                    
+            except Exception as e:
+                print(f"Error sending image to LCD: {e}")
+                # Save for debugging
+                filename = f"debug_display_{int(time.time())}.png"
+                image.save(filename)
+                print(f"Saved debug image to {filename}")
+                print("Image creation is working - just need to find the right LCD method")
+        
+        def close(self):
+            """Clean shutdown"""
+            try:
+                if hasattr(display, 'turn_off'):
+                    display.turn_off()
+            except:
+                pass
+    
+    SCREEN_AVAILABLE = True
+    print("✅ Successfully imported Turing Smart Screen display library!")
+    
+except ImportError as e:
+    print(f"❌ Import failed: {e}")
+    print("Falling back to mock mode...")
+    SCREEN_AVAILABLE = False
+    
+    # Mock class for testing without hardware
+    class TuringSmartScreen:
+        def __init__(self, display_type="3.5inch", orientation=0):
+            self.display_type = display_type
+            # Set dimensions based on display type
+            if display_type == "3.5inch":
+                self.dimensions = (320, 480)
+            elif display_type == "5inch":
+                self.dimensions = (800, 480)
+            elif display_type == "8.8inch":
+                self.dimensions = (1920, 480)
+            else:
+                self.dimensions = (320, 480)
+            
+        def get_dimensions(self):
+            return self.dimensions
+            
+        def display_image(self, image):
+            # Save the image so you can see what it looks like
+            filename = f"mock_display_{int(time.time())}.png"
+            # Use absolute path to make sure we know where it's saved
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            filepath = os.path.join(current_dir, filename)
+            
+            try:
+                image.save(filepath)
+                print(f"Mock: Saved display image to {filepath}")
+                return filepath
+            except Exception as e:
+                print(f"Error saving mock image: {e}")
+                # Try saving to current working directory as fallback
+                try:
+                    fallback_path = filename
+                    image.save(fallback_path)
+                    print(f"Mock: Saved display image to {os.path.abspath(fallback_path)}")
+                    return fallback_path
+                except Exception as e2:
+                    print(f"Failed to save image anywhere: {e2}")
+                    return None
+
+
+class SpotifyDisplayController:
+    def __init__(self, display_type="3.5inch", orientation=0):
+        """
+        Initialize the Spotify display controller
+        
+        Args:
+            display_type: Screen type ("3.5inch", "5inch", "8.8inch")
+            orientation: Screen orientation (0, 90, 180, 270)
+        """
+        print(f"Initializing display: {display_type}, orientation: {orientation}")
+        try:
+            self.screen = TuringSmartScreen(display_type=display_type, orientation=orientation)
+            self.screen_width, self.screen_height = self.screen.get_dimensions()
+            print(f"Display initialized successfully! Dimensions: {self.screen_width}x{self.screen_height}")
+        except Exception as e:
+            print(f"Error initializing display: {e}")
+            print("Make sure your LCD is connected via USB")
+            raise
+        
+        # Color scheme
+        self.bg_color = (18, 18, 18)  # Dark background like Spotify
+        self.text_color = (255, 255, 255)  # White text
+        self.accent_color = (30, 215, 96)  # Spotify green
+        self.progress_bg = (83, 83, 83)  # Gray progress background
+        
+        # Font sizes (adjust based on your screen size)
+        self.title_font_size = 16
+        self.artist_font_size = 14
+        self.time_font_size = 12
+        
+        # Layout constants
+        self.album_art_size = min(120, self.screen_height // 3)
+        self.margin = 10
+        
+        # Cache for album art
+        self.current_album_url = None
+        self.cached_album_art = None
+        
+    def get_font(self, size):
+        """Get font with fallback to default"""
+        try:
+            # Try to load a nice font (adjust path as needed)
+            return ImageFont.truetype("/System/Library/Fonts/Arial.ttf", size)
+        except:
+            try:
+                return ImageFont.truetype("arial.ttf", size)
+            except:
+                return ImageFont.load_default()
+    
+    def download_album_art(self, image_url, size=None):
+        """Download and resize album art"""
+        if not image_url:
+            return self.create_placeholder_art(size or self.album_art_size)
+            
+        if image_url == self.current_album_url and self.cached_album_art:
+            return self.cached_album_art
+            
+        try:
+            response = requests.get(image_url, timeout=5)
+            response.raise_for_status()
+            
+            image = Image.open(BytesIO(response.content))
+            if size:
+                image = image.resize((size, size), Image.Resampling.LANCZOS)
+            
+            # Cache the result
+            self.current_album_url = image_url
+            self.cached_album_art = image
+            
+            return image
+            
+        except Exception as e:
+            print(f"Error downloading album art: {e}")
+            return self.create_placeholder_art(size or self.album_art_size)
+    
+    def create_placeholder_art(self, size):
+        """Create a placeholder album art"""
+        placeholder = Image.new('RGB', (size, size), self.bg_color)
+        draw = ImageDraw.Draw(placeholder)
+        
+        # Draw a simple music note icon
+        center = size // 2
+        draw.ellipse([center-20, center-10, center+20, center+10], fill=self.accent_color)
+        draw.rectangle([center+15, center-20, center+20, center], fill=self.accent_color)
+        
+        return placeholder
+    
+    def format_time(self, ms):
+        """Convert milliseconds to MM:SS format"""
+        if not ms:
+            return "0:00"
+        
+        seconds = ms // 1000
+        minutes = seconds // 60
+        seconds = seconds % 60
+        return f"{minutes}:{seconds:02d}"
+    
+    def truncate_text(self, text, font, max_width):
+        """Truncate text to fit within max_width"""
+        if not text:
+            return ""
+            
+        draw = ImageDraw.Draw(Image.new('RGB', (1, 1)))
+        
+        if draw.textlength(text, font=font) <= max_width:
+            return text
+        
+        # Add ellipsis
+        while len(text) > 3 and draw.textlength(text + "...", font=font) > max_width:
+            text = text[:-1]
+        
+        return text + "..." if text else ""
+    
+    def draw_progress_bar(self, draw, x, y, width, height, progress):
+        """Draw a progress bar"""
+        # Background
+        draw.rectangle([x, y, x + width, y + height], fill=self.progress_bg)
+        
+        # Progress
+        if progress > 0:
+            progress_width = int(width * min(progress, 1.0))
+            draw.rectangle([x, y, x + progress_width, y + height], fill=self.accent_color)
+    
+    def update_display(self, track_info):
+        """
+        Update the display with current track information
+        
+        Args:
+            track_info: Dictionary containing:
+                - title: Song title
+                - artist: Artist name
+                - album: Album name
+                - album_art_url: URL to album art image
+                - progress_ms: Current playback position in ms
+                - duration_ms: Total track duration in ms
+                - is_playing: Boolean if currently playing
+        """
+        # Create a new image
+        image = Image.new('RGB', (self.screen_width, self.screen_height), self.bg_color)
+        draw = ImageDraw.Draw(image)
+        
+        # Get fonts
+        title_font = self.get_font(self.title_font_size)
+        artist_font = self.get_font(self.artist_font_size)
+        time_font = self.get_font(self.time_font_size)
+        
+        current_y = self.margin
+        
+        # Album art (top section)
+        if track_info.get('album_art_url'):
+            album_art = self.download_album_art(track_info['album_art_url'], self.album_art_size)
+            art_x = (self.screen_width - self.album_art_size) // 2
+            image.paste(album_art, (art_x, current_y))
+        
+        current_y += self.album_art_size + self.margin
+        
+        # Track title
+        title = track_info.get('title', 'Unknown Track')
+        max_text_width = self.screen_width - (2 * self.margin)
+        title_truncated = self.truncate_text(title, title_font, max_text_width)
+        
+        title_bbox = draw.textbbox((0, 0), title_truncated, font=title_font)
+        title_width = title_bbox[2] - title_bbox[0]
+        title_x = (self.screen_width - title_width) // 2
+        
+        draw.text((title_x, current_y), title_truncated, fill=self.text_color, font=title_font)
+        current_y += title_bbox[3] - title_bbox[1] + 5
+        
+        # Artist name
+        artist = track_info.get('artist', 'Unknown Artist')
+        artist_truncated = self.truncate_text(artist, artist_font, max_text_width)
+        
+        artist_bbox = draw.textbbox((0, 0), artist_truncated, font=artist_font)
+        artist_width = artist_bbox[2] - artist_bbox[0]
+        artist_x = (self.screen_width - artist_width) // 2
+        
+        draw.text((artist_x, current_y), artist_truncated, fill=(180, 180, 180), font=artist_font)
+        current_y += artist_bbox[3] - artist_bbox[1] + 15
+        
+        # Progress bar and time
+        progress_ms = track_info.get('progress_ms', 0)
+        duration_ms = track_info.get('duration_ms', 1)
+        progress = progress_ms / duration_ms if duration_ms > 0 else 0
+        
+        # Time labels
+        current_time = self.format_time(progress_ms)
+        total_time = self.format_time(duration_ms)
+        
+        time_y = current_y
+        draw.text((self.margin, time_y), current_time, fill=self.text_color, font=time_font)
+        
+        total_time_bbox = draw.textbbox((0, 0), total_time, font=time_font)
+        total_time_width = total_time_bbox[2] - total_time_bbox[0]
+        draw.text((self.screen_width - self.margin - total_time_width, time_y), total_time, fill=self.text_color, font=time_font)
+        
+        # Progress bar
+        time_bbox = draw.textbbox((0, 0), "0:00", font=time_font)
+        time_height = time_bbox[3] - time_bbox[1]
+        progress_y = current_y + time_height + 5
+        progress_bar_width = self.screen_width - (2 * self.margin)
+        
+        self.draw_progress_bar(draw, self.margin, progress_y, progress_bar_width, 4, progress)
+        
+        # Play/pause indicator
+        if track_info.get('is_playing', False):
+            # Draw play symbol (triangle)
+            symbol_y = progress_y + 15
+            symbol_size = 8
+            center_x = self.screen_width // 2
+            
+            points = [
+                (center_x - symbol_size//2, symbol_y),
+                (center_x + symbol_size//2, symbol_y + symbol_size//2),
+                (center_x - symbol_size//2, symbol_y + symbol_size)
+            ]
+            draw.polygon(points, fill=self.accent_color)
+        else:
+            # Draw pause symbol (two rectangles)
+            symbol_y = progress_y + 15
+            symbol_size = 8
+            center_x = self.screen_width // 2
+            
+            draw.rectangle([center_x - 6, symbol_y, center_x - 2, symbol_y + symbol_size], fill=self.accent_color)
+            draw.rectangle([center_x + 2, symbol_y, center_x + 6, symbol_y + symbol_size], fill=self.accent_color)
+        
+        # Send image to display
+        try:
+            self.screen.display_image(image)
+        except Exception as e:
+            print(f"Error updating display: {e}")
+    
+    def show_loading(self):
+        """Show a loading screen"""
+        image = Image.new('RGB', (self.screen_width, self.screen_height), self.bg_color)
+        draw = ImageDraw.Draw(image)
+        
+        font = self.get_font(18)
+        text = "Loading Spotify..."
+        
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        x = (self.screen_width - text_width) // 2
+        y = (self.screen_height - text_height) // 2
+        
+        draw.text((x, y), text, fill=self.accent_color, font=font)
+        
+        try:
+            self.screen.display_image(image)
+        except Exception as e:
+            print(f"Error showing loading screen: {e}")
+    
+    def show_no_playback(self):
+        """Show when no music is playing"""
+        image = Image.new('RGB', (self.screen_width, self.screen_height), self.bg_color)
+        draw = ImageDraw.Draw(image)
+        
+        font = self.get_font(16)
+        text = "No music playing"
+        
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        x = (self.screen_width - text_width) // 2
+        y = (self.screen_height - text_height) // 2
+        
+        draw.text((x, y), text, fill=(128, 128, 128), font=font)
+        
+        # Draw a large music note
+        center_x = self.screen_width // 2
+        note_y = y - 60
+        draw.ellipse([center_x-25, note_y, center_x+25, note_y+20], outline=self.accent_color, width=3)
+        draw.rectangle([center_x+20, note_y-30, center_x+25, note_y+10], fill=self.accent_color)
+        
+        try:
+            self.screen.display_image(image)
+        except Exception as e:
+            print(f"Error showing no playback screen: {e}")
+    
+    def close(self):
+        """Clean up resources"""
+        if hasattr(self.screen, 'close'):
+            self.screen.close()
+
+
+# Example usage
+if __name__ == "__main__":
+    # Test the display controller
+    controller = SpotifyDisplayController(display_type="3.5inch")
+    
+    # Show loading
+    controller.show_loading()
+    time.sleep(2)
+    
+    # Test with sample track data
+    sample_track = {
+        'title': 'Bohemian Rhapsody',
+        'artist': 'Queen',
+        'album': 'A Night at the Opera',
+        'album_art_url': 'https://i.scdn.co/image/ab67616d0000b273ce4f1737bc8a646c8c4bd25a',
+        'progress_ms': 125000,  # 2:05
+        'duration_ms': 355000,  # 5:55
+        'is_playing': True
+    }
+    
+    controller.update_display(sample_track)
+    
+    print("Display updated! Press Ctrl+C to exit...")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        controller.close()
+        print("\nDisplay controller closed.")
