@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""
-Spotify Car Display - Your Custom Spotify Car Thing
-This version includes enhanced loading screens with animations and better state management
-"""
+
 
 import time
 import sys
@@ -241,6 +238,12 @@ class LoadingScreenManager:
                 x1, y1 = points[j]
                 x2, y2 = points[j + 1]
                 draw.line([(x1, y1), (x2, y2)], fill=line_color, width=line_width)
+
+    def _get_logo_image(self, size, dimmed=False):
+        """Try to get a proper Spotify logo image (for future enhancement)"""
+        # For now, return None to use the drawn logo
+        # In the future, you could download the actual Spotify logo PNG
+        return None
 
 
 class SpotifyCarDisplay:
@@ -547,31 +550,55 @@ class SpotifyCarDisplay:
         return image
     
     def draw_spotify_logo(self, draw, center_x, center_y, size=60):
-        """Draw the Spotify logo (curved lines)"""
-        # Spotify logo consists of curved lines
-        line_color = self.accent_color
-        line_width = size // 15
+        """Draw the proper Spotify logo - green circle with three curved horizontal lines"""
+        # Draw the green circle background first
+        circle_radius = size // 2
+        circle_bbox = [
+            center_x - circle_radius, center_y - circle_radius,
+            center_x + circle_radius, center_y + circle_radius
+        ]
+        draw.ellipse(circle_bbox, fill=self.accent_color)
         
-        # Draw three curved lines
-        for i, curve_height in enumerate([0.7, 0.5, 0.3]):
-            y_offset = (i - 1) * (size // 8)
-            curve_y = center_y + y_offset
+        # Now draw the 3 black curved lines on top
+        line_color = (0, 0, 0)  # Pure black for contrast
+        
+        # Calculate line properties based on the official logo proportions
+        line_spacing = size // 6  # Space between lines
+        base_width = max(3, size // 18)  # Line thickness
+        
+        # Three lines with proper curves - positioned like the official logo
+        lines_data = [
+            {"y_offset": -line_spacing, "length_ratio": 0.75, "curve_intensity": 0.15},  # Top line - longest, most curved
+            {"y_offset": 0, "length_ratio": 0.60, "curve_intensity": 0.12},             # Middle line
+            {"y_offset": line_spacing, "length_ratio": 0.45, "curve_intensity": 0.10}   # Bottom line - shortest, least curved
+        ]
+        
+        for i, line_data in enumerate(lines_data):
+            y_pos = center_y + line_data["y_offset"]
+            line_length = size * line_data["length_ratio"]
+            curve_intensity = line_data["curve_intensity"]
+            line_width = base_width + (2 - i)  # Lines get slightly thinner as they go down
             
-            # Create curved line points
+            # Create smooth curved line using multiple small segments
             points = []
-            for x in range(-size//2, size//2, 2):
-                # Create a curve using sine wave
-                curve = math.sin(x / (size/6)) * (size * curve_height * 0.1)
-                points.append((center_x + x, curve_y + curve))
+            num_segments = 20  # More segments = smoother curve
             
-            # Draw the curve as connected line segments
+            for j in range(num_segments + 1):
+                # Calculate x position along the line
+                t = j / num_segments  # Parameter from 0 to 1
+                x = center_x - line_length/2 + t * line_length
+                
+                # Create natural curve - parabolic arc
+                curve_offset = -curve_intensity * size * (4 * t * (1 - t))  # Parabola: peaks at t=0.5
+                y = y_pos + curve_offset
+                
+                points.append((x, y))
+            
+            # Draw the curved line as connected segments
             for j in range(len(points) - 1):
                 x1, y1 = points[j]
                 x2, y2 = points[j + 1]
-                
-                # Draw thick line by drawing multiple thin lines
-                for offset in range(-line_width//2, line_width//2 + 1):
-                    draw.line([(x1, y1 + offset), (x2, y2 + offset)], fill=line_color, width=1)
+                draw.line([(x1, y1), (x2, y2)], fill=line_color, width=line_width)
     
     def display_image(self, image):
         """Send image to LCD - rotate to fit portrait screen"""
