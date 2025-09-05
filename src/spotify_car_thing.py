@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
-
 import time
 import sys
 import os
 import math
+import psutil
+import threading
 from PIL import Image, ImageDraw, ImageFont
 import requests
 from io import BytesIO
-import threading
 
 # Import your Spotify client
 from spotify_client import SpotifyClient
@@ -23,233 +23,79 @@ from library.lcd.lcd_comm_rev_b import LcdCommRevB
 from library.lcd.lcd_comm import LcdComm
 
 
-class LoadingScreenManager:
-    """Manages various loading screen states for Spotify display"""
+class PowerMonitor:
+    """Monitor computer power state and manage display accordingly"""
     
-    # Animation constants
-    DOT_ANIMATION_SPEED = 10  # frames per dot change
-    SPINNER_ROTATION_SPEED = 0.2
-    SPINNER_FADE_SPEED = 5    # frames per fade step
+    def __init__(self, display_instance):
+        self.display = display_instance
+        self.monitoring = False
+        self.monitor_thread = None
+        self.last_battery_plugged = None
+        self.is_laptop = self._detect_laptop()
+        
+    def _detect_laptop(self):
+        """Detect if running on a laptop (has battery)"""
+        try:
+            battery = psutil.sensors_battery()
+            return battery is not None
+        except:
+            return False
     
-    # Color constants
-    ERROR_COLOR = (255, 100, 100)
-    
-    def __init__(self, parent_display):
-        self.display = parent_display
-        self._cached_spinner_positions = {}
-    
-    def create_loading_screen(self, message="Connecting...", show_progress=False, progress=0):
-        """Create Spotify-style loading screen with logo and optional progress"""
-        image = Image.new('RGB', (self.display.logical_width, self.display.logical_height), 
-                         self.display.bg_color)
-        draw = ImageDraw.Draw(image)
-        
-        # Draw Spotify logo in center
-        center_x = self.display.logical_width // 2
-        center_y = self.display.logical_height // 2 - 30
-        
-        self.display.draw_spotify_logo(draw, center_x, center_y, size=80)
-        
-        # Dynamic message below logo
-        font = self.display.get_font(24)
-        
-        bbox = draw.textbbox((0, 0), message, font=font)
-        text_width = bbox[2] - bbox[0]
-        x = (self.display.logical_width - text_width) // 2
-        y = center_y + 60
-        
-        draw.text((x, y), message, fill=self.display.secondary_color, font=font)
-        
-        # Optional progress bar
-        if show_progress:
-            progress_y = y + 40
-            progress_width = 200
-            progress_height = 4
-            progress_x = (self.display.logical_width - progress_width) // 2
+    def start_monitoring(self):
+        """Start monitoring power state"""
+        if not self.is_laptop:
+            print("🔌 Desktop detected - skipping power monitoring")
+            return
             
-            self.display.draw_progress_bar(draw, progress_x, progress_y, progress_width, progress_height, progress / 100)
-            
-            # Progress percentage
-            percent_text = f"{int(progress)}%"
-            percent_font = self.display.get_font(16)
-            bbox = draw.textbbox((0, 0), percent_text, font=percent_font)
-            text_width = bbox[2] - bbox[0]
-            percent_x = (self.display.logical_width - text_width) // 2
-            draw.text((percent_x, progress_y + 15), percent_text, fill=self.display.secondary_color, font=percent_font)
-        
-        return image
+        self.monitoring = True
+        self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        self.monitor_thread.start()
+        print("🔋 Power monitoring started")
     
-    def create_animated_loading_screen(self, frame=0, message_base="Connecting"):
-        """Create animated loading screen with rotating dots"""
-        image = Image.new('RGB', (self.display.logical_width, self.display.logical_height), 
-                         self.display.bg_color)
-        draw = ImageDraw.Draw(image)
-        
-        # Draw Spotify logo in center
-        center_x = self.display.logical_width // 2
-        center_y = self.display.logical_height // 2 - 30
-        
-        self.display.draw_spotify_logo(draw, center_x, center_y, size=80)
-        
-        # Animated message with dots
-        dot_count = (frame // self.DOT_ANIMATION_SPEED) % 4  # Change dots every 10 frames, cycle 0-3
-        dots = "." * dot_count
-        message = message_base + dots
-        
-        font = self.display.get_font(24)
-        bbox = draw.textbbox((0, 0), message, font=font)
-        text_width = bbox[2] - bbox[0]
-        x = (self.display.logical_width - text_width) // 2
-        y = center_y + 60
-        
-        draw.text((x, y), message, fill=self.display.secondary_color, font=font)
-        
-        # Animated loading indicator (spinning circles)
-        self.draw_loading_spinner(draw, center_x, y + 50, frame)
-        
-        return image
+    def stop_monitoring(self):
+        """Stop monitoring power state"""
+        self.monitoring = False
+        if self.monitor_thread:
+            self.monitor_thread.join(timeout=1)
     
-    def draw_loading_spinner(self, draw, center_x, center_y, frame):
-        """Draw animated loading spinner"""
-        radius = 15
-        dot_radius = 3
-        num_dots = 8
-        
-        for i in range(num_dots):
-            angle = (i * 2 * math.pi / num_dots) + (frame * self.SPINNER_ROTATION_SPEED)
-            dot_x = center_x + radius * math.cos(angle)
-            dot_y = center_y + radius * math.sin(angle)
-            
-            # Fade dots based on position
-            alpha = (i + frame // self.SPINNER_FADE_SPEED) % num_dots
-            brightness = int(255 * (alpha / num_dots))
-            dot_color = (brightness, brightness, brightness)
-            
-            draw.ellipse([
-                dot_x - dot_radius, dot_y - dot_radius,
-                dot_x + dot_radius, dot_y + dot_radius
-            ], fill=dot_color)
-    
-    def create_auth_loading_screen(self):
-        """Create loading screen specifically for authentication"""
-        return self.create_loading_screen("Authenticating with Spotify...")
-    
-    def create_track_loading_screen(self):
-        """Create loading screen for loading track data"""
-        return self.create_loading_screen("Loading track information...")
-    
-    def create_reconnecting_screen(self, frame=0):
-        """Create animated loading screen for reconnection attempts"""
-        return self.create_animated_loading_screen(frame, "Reconnecting")
-    
-    def create_error_screen(self, error_message="Connection failed"):
-        """Create error screen with retry indication"""
-        image = Image.new('RGB', (self.display.logical_width, self.display.logical_height), 
-                         self.display.bg_color)
-        draw = ImageDraw.Draw(image)
-        
-        # Draw Spotify logo in center (dimmed)
-        center_x = self.display.logical_width // 2
-        center_y = self.display.logical_height // 2 - 50
-        logo_size = 60
-        
-        # Try to use downloaded logo first (dimmed), fallback to drawn logo
-        logo_img = self._get_logo_image(logo_size, dimmed=True)
-        if logo_img:
-            logo_x = center_x - logo_size // 2
-            logo_y = center_y - logo_size // 2
-            if logo_img.mode == 'RGBA':
-                image.paste(logo_img, (logo_x, logo_y), logo_img)
-            else:
-                image.paste(logo_img, (logo_x, logo_y))
-        else:
-            # Fallback to drawn dimmed logo
-            dimmed_accent = tuple(c // 2 for c in self.display.accent_color)
-            self._draw_dimmed_logo(draw, center_x, center_y, dimmed_accent, size=logo_size)
-        
-        # Error message
-        font = self.display.get_font(20)
-        bbox = draw.textbbox((0, 0), error_message, font=font)
-        text_width = bbox[2] - bbox[0]
-        x = (self.display.logical_width - text_width) // 2
-        y = center_y + 40
-        
-        draw.text((x, y), error_message, fill=self.ERROR_COLOR, font=font)
-        
-        # Retry message
-        retry_font = self.display.get_font(16)
-        retry_text = "Retrying in a moment..."
-        bbox = draw.textbbox((0, 0), retry_text, font=retry_font)
-        text_width = bbox[2] - bbox[0]
-        x = (self.display.logical_width - text_width) // 2
-        y = center_y + 70
-        
-        draw.text((x, y), retry_text, fill=self.display.secondary_color, font=retry_font)
-        
-        return image
-    
-    def _draw_dimmed_logo(self, draw, center_x, center_y, dimmed_color, size=60):
-        """Draw a dimmed version of the Spotify logo for error states"""
-        # Draw the dimmed green circle background first
-        circle_radius = size // 2
-        circle_bbox = [
-            center_x - circle_radius, center_y - circle_radius,
-            center_x + circle_radius, center_y + circle_radius
-        ]
-        draw.ellipse(circle_bbox, fill=dimmed_color)
-        
-        # Now draw the 3 black curved lines on top (same as normal logo)
-        line_color = (0, 0, 0)  # Pure black
-        
-        # Calculate line properties based on the official logo proportions
-        line_spacing = size // 6  # Space between lines
-        base_width = max(3, size // 18)  # Line thickness
-        
-        # Three lines with proper curves - positioned like the official logo
-        lines_data = [
-            {"y_offset": -line_spacing, "length_ratio": 0.75, "curve_intensity": 0.15},  # Top line - longest, most curved
-            {"y_offset": 0, "length_ratio": 0.60, "curve_intensity": 0.12},             # Middle line
-            {"y_offset": line_spacing, "length_ratio": 0.45, "curve_intensity": 0.10}   # Bottom line - shortest, least curved
-        ]
-        
-        for i, line_data in enumerate(lines_data):
-            y_pos = center_y + line_data["y_offset"]
-            line_length = size * line_data["length_ratio"]
-            curve_intensity = line_data["curve_intensity"]
-            line_width = base_width + (2 - i)  # Lines get slightly thinner as they go down
-            
-            # Create smooth curved line using multiple small segments
-            points = []
-            num_segments = 20  # More segments = smoother curve
-            
-            for j in range(num_segments + 1):
-                # Calculate x position along the line
-                t = j / num_segments  # Parameter from 0 to 1
-                x = center_x - line_length/2 + t * line_length
+    def _monitor_loop(self):
+        """Monitor loop for power state changes"""
+        while self.monitoring:
+            try:
+                battery = psutil.sensors_battery()
+                if battery:
+                    current_plugged = battery.power_plugged
+                    
+                    if self.last_battery_plugged is not None:
+                        if current_plugged and not self.last_battery_plugged:
+                            print("🔌 Power connected - waking display")
+                            self._wake_display()
+                        elif not current_plugged and self.last_battery_plugged:
+                            print("🔋 On battery power - display staying active")
+                    
+                    self.last_battery_plugged = current_plugged
                 
-                # Create natural curve - parabolic arc
-                curve_offset = -curve_intensity * size * (4 * t * (1 - t))  # Parabola: peaks at t=0.5
-                y = y_pos + curve_offset
+                time.sleep(5)  # Check every 5 seconds
                 
-                points.append((x, y))
-            
-            # Draw the curved line as connected segments
-            for j in range(len(points) - 1):
-                x1, y1 = points[j]
-                x2, y2 = points[j + 1]
-                draw.line([(x1, y1), (x2, y2)], fill=line_color, width=line_width)
+            except Exception as e:
+                print(f"⚠️ Power monitoring error: {e}")
+                time.sleep(10)
+    
+    def _wake_display(self):
+        """Wake up the display"""
+        try:
+            self.display.lcd.ScreenOn()
+            # Force a display update
+            if hasattr(self.display, '_force_update'):
+                self.display._force_update()
+        except Exception as e:
+            print(f"❌ Error waking display: {e}")
 
-    def _get_logo_image(self, size, dimmed=False):
-        """Try to get a proper Spotify logo image (for future enhancement)"""
-        # For now, return None to use the drawn logo
-        # In the future, you could download the actual Spotify logo PNG
-        return None
 
-
-class SpotifyCarDisplay:
+class SpotifyDeskThing:
     def __init__(self):
-        """Initialize the Spotify Car Display"""
-        print("🎵 Initializing Spotify Car Display...")
+        """Initialize the Spotify Desk Thing"""
+        print("🎵 Initializing Spotify Desk Thing v4.0...")
         
         # Initialize Spotify client
         self.spotify = SpotifyClient()
@@ -290,10 +136,10 @@ class SpotifyCarDisplay:
         self.last_track_id = None
         self.last_progress_ms = 0
         
-        # Initialize loading screen manager
-        self.loading_manager = LoadingScreenManager(self)
+        # Initialize power monitor
+        self.power_monitor = PowerMonitor(self)
         
-        print("✅ Spotify Car Display initialized!")
+        print("✅ Spotify Desk Thing v4.0 initialized!")
         
     def init_lcd(self):
         """Initialize LCD communication"""
@@ -332,6 +178,52 @@ class SpotifyCarDisplay:
                         return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size)
                     except:
                         return ImageFont.load_default()
+    
+    def create_startup_screen(self):
+        """Create simple startup screen - no animation"""
+        image = Image.new('RGB', (self.logical_width, self.logical_height), self.bg_color)
+        draw = ImageDraw.Draw(image)
+        
+        # Draw Spotify logo in center
+        center_x = self.logical_width // 2
+        center_y = self.logical_height // 2 - 20
+        
+        self.draw_spotify_logo(draw, center_x, center_y, size=100)
+        
+        # Welcome text
+        welcome_font = self.get_font(28)
+        welcome_text = "Spotify Desk Thing"
+        bbox = draw.textbbox((0, 0), welcome_text, font=welcome_font)
+        text_width = bbox[2] - bbox[0]
+        x = (self.logical_width - text_width) // 2
+        y = center_y + 70
+        
+        draw.text((x, y), welcome_text, fill=self.text_color, font=welcome_font)
+        
+        return image
+    
+    def create_goodbye_screen(self):
+        """Create simple goodbye screen - no animation"""
+        image = Image.new('RGB', (self.logical_width, self.logical_height), self.bg_color)
+        draw = ImageDraw.Draw(image)
+        
+        # Draw Spotify logo in center
+        center_x = self.logical_width // 2
+        center_y = self.logical_height // 2 - 20
+        
+        self.draw_spotify_logo(draw, center_x, center_y, size=80)
+        
+        # Goodbye text
+        goodbye_font = self.get_font(24)
+        goodbye_text = "Thanks for listening!"
+        bbox = draw.textbbox((0, 0), goodbye_text, font=goodbye_font)
+        text_width = bbox[2] - bbox[0]
+        x = (self.logical_width - text_width) // 2
+        y = center_y + 60
+        
+        draw.text((x, y), goodbye_text, fill=self.text_color, font=goodbye_font)
+        
+        return image
     
     def download_album_art(self, image_url):
         """Download and cache album artwork"""
@@ -640,40 +532,27 @@ class SpotifyCarDisplay:
             print(f"❌ Error getting track info: {e}")
             return None
     
-    def enhanced_update_loop(self):
-        """Enhanced update loop with better loading states"""
-        print("🔄 Starting enhanced display update loop...")
+    def _force_update(self):
+        """Force a display update - called by power monitor"""
+        current_track = self.get_current_track()
+        display_image = self.create_spotify_display(current_track)
+        self.display_image(display_image)
+    
+    def update_loop(self):
+        """Main update loop - FAST startup, no loading screens"""
+        print("🔄 Starting main display loop...")
         
-        # Show initial loading
-        loading_image = self.loading_manager.create_loading_screen("Starting up...")
-        self.display_image(loading_image)
-        time.sleep(1)
+        # Get current track immediately - no loading screens
+        current_track = self.get_current_track()
         
-        # Show auth check
-        auth_image = self.loading_manager.create_auth_loading_screen()
-        self.display_image(auth_image)
-        time.sleep(1)
-        
-        # Initial check for current track
-        print("🎵 Checking for active playback...")
-        initial_track = self.get_current_track()
-        
-        # Show appropriate initial screen
-        if initial_track:
-            print(f"🎵 Found active track: {initial_track['title']}")
-            # Show track loading screen briefly
-            track_loading = self.loading_manager.create_track_loading_screen()
-            self.display_image(track_loading)
-            time.sleep(0.5)
-            
-            # Then show the actual track
-            display_image = self.create_spotify_display(initial_track)
+        if current_track:
+            print(f"🎵 Found active track: {current_track['title']}")
+            display_image = self.create_spotify_display(current_track)
             self.display_image(display_image)
-            self.last_track_id = initial_track['id']
-            self.last_progress_ms = initial_track.get('progress_ms', 0)
+            self.last_track_id = current_track['id']
+            self.last_progress_ms = current_track.get('progress_ms', 0)
         else:
-            print("⏸️  No music currently playing - showing idle screen")
-            # Show "no music playing" screen immediately
+            print("⏸️  No music currently playing")
             idle_image = self.create_spotify_display(None)
             self.display_image(idle_image)
             self.last_track_id = None
@@ -681,12 +560,13 @@ class SpotifyCarDisplay:
         
         frame_counter = 0
         error_count = 0
-        max_errors = 3
+        
+        # Start power monitoring
+        self.power_monitor.start_monitoring()
         
         while self.running:
             try:
                 current_track = self.get_current_track()
-                
                 should_update = False
                 
                 if current_track:
@@ -695,21 +575,16 @@ class SpotifyCarDisplay:
                     
                     if track_id != self.last_track_id:
                         should_update = True
-                        
                         if self.last_track_id is None:
                             print(f"▶️  Music started: {current_track['title']}")
                         else:
                             print(f"🎵 Track changed: {current_track['title']}")
-                        
-                        # No loading screen - just update directly for seamless experience
-                    
                     elif abs(progress_ms - self.last_progress_ms) > 2000:
                         should_update = True
-                        print(f"⏯️  Progress update: {self.format_time(progress_ms)}")
                     
                     self.last_track_id = track_id
                     self.last_progress_ms = progress_ms
-                    error_count = 0  # Reset error count on success
+                    error_count = 0
                     
                 else:
                     if self.last_track_id is not None:
@@ -722,39 +597,40 @@ class SpotifyCarDisplay:
                     display_image = self.create_spotify_display(current_track)
                     self.display_image(display_image)
                 
-                frame_counter += 1
-                time.sleep(1)
+                time.sleep(0.5)  # Fast updates
                 
             except KeyboardInterrupt:
-                print("\n🛑 Stopping display...")
+                print("\n🛑 Stopping...")
                 break
             except Exception as e:
-                print(f"❌ Update error: {e}")
+                print(f"❌ Error: {e}")
                 error_count += 1
-                
-                if error_count >= max_errors:
-                    error_image = self.loading_manager.create_error_screen("Multiple connection failures")
-                    self.display_image(error_image)
-                    time.sleep(3)
+                if error_count > 3:
+                    print("Multiple errors, taking a longer break...")
+                    time.sleep(5)
                     error_count = 0
                 else:
-                    # Show animated reconnecting screen
-                    reconnect_image = self.loading_manager.create_reconnecting_screen(frame_counter)
-                    self.display_image(reconnect_image)
-                
-                time.sleep(2)
+                    time.sleep(2)
+        
+        self.power_monitor.stop_monitoring()
     
     def start(self):
-        """Start the Spotify Car Display"""
+        """Start the Spotify Desk Thing - SUPER FAST"""
         try:
-            print("🚗 Starting Enhanced Spotify Car Display...")
-            print("Press Ctrl+C to stop")
+            print("🚀 Starting Spotify Desk Thing v4.0...")
             
             if not self.spotify.is_authenticated():
                 print("❌ Not authenticated with Spotify. Please run authentication first.")
                 return
             
-            self.enhanced_update_loop()
+            # Show startup screen for exactly 1 second
+            print("🌟 Quick startup...")
+            startup_image = self.create_startup_screen()
+            self.display_image(startup_image)
+            time.sleep(1.0)  # Exactly 1 second
+            
+            # Jump straight to main content
+            self.update_loop()
             
         except KeyboardInterrupt:
             print("\n🛑 Shutting down...")
@@ -762,39 +638,40 @@ class SpotifyCarDisplay:
             self.stop()
     
     def stop(self):
-        """Clean shutdown"""
+        """FAST shutdown"""
         self.running = False
         try:
-            goodbye_image = Image.new('RGB', (self.logical_width, self.logical_height), self.bg_color)
-            draw = ImageDraw.Draw(goodbye_image)
-            font = self.get_font(24)
-            text = "Goodbye!"
-            bbox = draw.textbbox((0, 0), text, font=font)
-            text_width = bbox[2] - bbox[0]
-            x = (self.logical_width - text_width) // 2
-            y = (self.logical_height - (bbox[3] - bbox[1])) // 2
-            draw.text((x, y), text, fill=self.accent_color, font=font)
+            # Show goodbye for exactly 1 second
+            print("👋 Quick goodbye...")
+            goodbye_image = self.create_goodbye_screen()
             self.display_image(goodbye_image)
-            time.sleep(2)
+            time.sleep(1.0)  # Exactly 1 second
             
+            # Turn off immediately
             self.lcd.Clear()
             self.lcd.ScreenOff()
-            print("📱 Display turned off")
-        except:
-            pass
+            print("📱 Display off")
+            
+        except Exception as e:
+            print(f"⚠️ Shutdown error: {e}")
 
 
 if __name__ == "__main__":
-    print("🎵 Enhanced Spotify Car Display v3.0 - Loading Screen System")
-    print("=" * 60)
+    print("🎵 Spotify Desk Thing v4.0 - Fast & Clean")
+    print("=" * 50)
+    print("✨ Super fast startup and shutdown!")
+    print("✨ 1 second startup, 1 second goodbye")
+    print("✨ No loading screens or delays")
+    print("=" * 50)
     
     try:
-        display = SpotifyCarDisplay()
+        display = SpotifyDeskThing()
         display.start()
     except Exception as e:
         print(f"❌ Failed to start: {e}")
         print("Make sure:")
         print("1. LCD is connected via USB")
-        print("2. Spotify app is open and playing")
+        print("2. Spotify app is open")
         print("3. spotify_client.py is in the same folder")
         print("4. You've authenticated with Spotify")
+        print("5. psutil library is installed: pip install psutil")

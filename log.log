@@ -221,3 +221,51 @@
 9/5/2025 12:32:01 PM [DEBUG] Auto detected COM port: COM3
 9/5/2025 12:32:18 PM [DEBUG] HW revision: A
 9/5/2025 12:32:18 PM [DEBUG] Auto detected COM port: COM3
+9/5/2025 1:09:59 PM [DEBUG] HW revision: A
+9/5/2025 1:09:59 PM [DEBUG] Auto detected COM port: COM3
+9/5/2025 1:14:54 PM [DEBUG] HW revision: A
+9/5/2025 1:14:54 PM [DEBUG] Auto detected COM port: COM3
+9/5/2025 1:16:20 PM [DEBUG] HW revision: A
+9/5/2025 1:16:20 PM [DEBUG] Auto detected COM port: COM3
+9/5/2025 1:22:54 PM [DEBUG] HW revision: A
+9/5/2025 1:22:54 PM [DEBUG] Auto detected COM port: COM3
+9/5/2025 1:26:05 PM [DEBUG] HW revision: A
+9/5/2025 1:26:05 PM [DEBUG] Auto detected COM port: COM3
+9/5/2025 1:26:23 PM [DEBUG] HW revision: A
+9/5/2025 1:26:23 PM [DEBUG] Auto detected COM port: COM3
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [WARNING] (Write line) Too fast! Slow down!
+9/5/2025 1:26:31 PM [ERROR] SerialException: Failed to send serial data to device. Closing and reopening COM port before retrying once.
+9/5/2025 1:26:32 PM [DEBUG] Static COM port: COM3
+9/5/2025 1:26:32 PM [ERROR] Cannot open COM port COM3: could not open port 'COM3': FileNotFoundError(2, 'The system cannot find the file specified.', None, 2)
+9/5/2025 1:26:35 PM [DEBUG] HW revision: A
+9/5/2025 1:26:35 PM [DEBUG] Auto detected COM port: COM3
