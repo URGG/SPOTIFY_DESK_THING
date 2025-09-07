@@ -30,6 +30,29 @@ def check_pyinstaller():
         print("   pip install pyinstaller")
         return False
 
+def check_dependencies():
+    """Check if all required dependencies are installed"""
+    required_packages = [
+        'spotipy', 'pillow', 'requests', 'psutil'
+    ]
+    
+    missing = []
+    for package in required_packages:
+        try:
+            __import__(package)
+            print(f"✅ {package} found")
+        except ImportError:
+            missing.append(package)
+            print(f"❌ {package} not found")
+    
+    if missing:
+        print(f"\n❌ Missing packages: {', '.join(missing)}")
+        print("Install them with:")
+        print(f"   pip install {' '.join(missing)}")
+        return False
+    
+    return True
+
 def detect_scripts():
     """Detect the location of main script and client script"""
     main_script = None
@@ -68,6 +91,12 @@ def create_spec_file(main_script, client_script):
     if client_script:
         datas.append(f"('{client_script}', '.')")
     
+    # Add turing library if it exists
+    turing_path = Path('turing-smart-screen-python-main')
+    if turing_path.exists():
+        datas.append(f"('{turing_path}', 'turing-smart-screen-python-main')")
+        print("📁 Including turing-smart-screen-python-main library")
+    
     datas_str = ',\n        '.join(datas) if datas else ''
     
     # Check for optional files
@@ -91,6 +120,18 @@ a = Analysis(
         'PIL._tkinter_finder',
         'requests.packages.urllib3',
         'spotify_client',
+        'spotipy',
+        'spotipy.util',
+        'spotipy.oauth2',
+        'spotipy.client',
+        'psutil',
+        'urllib3',
+        'certifi',
+        'library',
+        'library.lcd',
+        'library.lcd.lcd_comm',
+        'library.lcd.lcd_comm_rev_a',
+        'library.lcd.lcd_comm_rev_b',
     ],
     hookspath=[],
     hooksconfig={{}},
@@ -134,7 +175,7 @@ exe = EXE(
     with open('spotify_car_thing.spec', 'w', encoding='utf-8') as f:
         f.write(spec_content)
     
-    print("📝 Created PyInstaller spec file")
+    print("📝 Created PyInstaller spec file with spotipy dependencies")
 
 def create_version_info():
     """Create version info file for Windows executable"""
@@ -251,6 +292,10 @@ def create_distribution_package():
 
 ## Troubleshooting
 
+If you get "spotipy not found" error:
+- This shouldn't happen with the standalone exe
+- If it does, install: pip install spotipy
+
 If the display doesn't work:
 1. Check USB connection to LCD
 2. Ensure Spotify is running with music playing
@@ -259,7 +304,7 @@ If the display doesn't work:
 
 ## Files Included
 
-- `SpotifyCarThing.exe` - Main application
+- `SpotifyCarThing.exe` - Main application (includes all dependencies)
 - `spotify_client.py` - Spotify API client (for reference)
 - `README.md` - Full documentation
 - `requirements.txt` - Python dependencies (for developers)
@@ -353,24 +398,25 @@ def print_success_message():
 📁 Files created:
    • SpotifyCarThing_v4.0.0/ - Distribution folder
    • SpotifyCarThing_v4.0.0.zip - Ready-to-share package
-   • dist/SpotifyCarThing.exe - Standalone executable
+   • dist/SpotifyCarThing.exe - Standalone executable with ALL dependencies
 
 🚀 To distribute your application:
    1. Share the SpotifyCarThing_v4.0.0.zip file
    2. Recipients can unzip and run SpotifyCarThing.exe
    3. No Python installation required on target machines!
+   4. All dependencies (including spotipy) are bundled!
 
 📋 Next Steps:
    • Test the executable on different systems
-   • Update the README.md with any specific instructions
-   • Consider code signing for professional distribution
-   • Create an installer for even easier deployment
+   • The exe now includes spotipy and all other dependencies
+   • Users no longer need to install Python packages
+   • Authentication still happens on first run
 
 💡 Pro Tips:
-   • The executable includes all dependencies
-   • Users still need spotify_client.py for first-time auth
+   • The executable is now completely self-contained
+   • All Python dependencies are bundled inside
+   • Test on a machine without Python to verify it works
    • Consider creating a setup wizard for authentication
-   • Test on systems without Python installed
 
 Ready for professional distribution! 🎵🚗
     """
@@ -380,11 +426,14 @@ Ready for professional distribution! 🎵🚗
 def main():
     """Main build process"""
     
-    print("🔨 Spotify Car Thing - Executable Builder v4.0.0")
+    print("🔨 Spotify Car Thing - Executable Builder v4.1.0")
     print("=" * 60)
     
     # Check prerequisites
     if not check_pyinstaller():
+        return 1
+    
+    if not check_dependencies():
         return 1
     
     # Detect script locations

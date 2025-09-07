@@ -1,2 +1,13 @@
 9/5/2025 12:50:31 PM [DEBUG] HW revision: A
 9/5/2025 12:50:31 PM [DEBUG] Auto detected COM port: COM3
+9/7/2025 12:28:27 PM [DEBUG] HW revision: A
+9/7/2025 12:28:27 PM [DEBUG] Auto detected COM port: COM3
+9/7/2025 12:50:40 PM [ERROR] Error getting playback state: HTTPSConnectionPool(host='api.spotify.com', port=443): Read timed out. (read timeout=5)
+9/7/2025 12:50:43 PM [WARNING] Retrying (Retry(total=2, connect=None, read=False, redirect=None, status=3)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000024B73809970>: Failed to resolve 'api.spotify.com' ([Errno 11001] getaddrinfo failed)")': /v1/me/player
+9/7/2025 12:50:44 PM [WARNING] Retrying (Retry(total=1, connect=None, read=False, redirect=None, status=3)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000024B73809E20>: Failed to resolve 'api.spotify.com' ([Errno 11001] getaddrinfo failed)")': /v1/me/player
+9/7/2025 12:50:45 PM [WARNING] Retrying (Retry(total=0, connect=None, read=False, redirect=None, status=3)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000024B73809FD0>: Failed to resolve 'api.spotify.com' ([Errno 11001] getaddrinfo failed)")': /v1/me/player
+9/7/2025 12:50:45 PM [ERROR] Error getting playback state: HTTPSConnectionPool(host='api.spotify.com', port=443): Max retries exceeded with url: /v1/me/player (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000024B738251C0>: Failed to resolve 'api.spotify.com' ([Errno 11001] getaddrinfo failed)"))
+9/7/2025 12:50:57 PM [WARNING] Retrying (Retry(total=2, connect=None, read=False, redirect=None, status=3)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x0000024B73825400>: Failed to resolve 'api.spotify.com' ([Errno 11001] getaddrinfo failed)")': /v1/me/player
+9/7/2025 12:54:13 PM [ERROR] Error getting playback state: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+9/7/2025 3:09:19 PM [ERROR] Error getting playback state: HTTPSConnectionPool(host='api.spotify.com', port=443): Read timed out. (read timeout=5)
+9/7/2025 3:14:45 PM [WARNING] Your application has reached a rate/request limit. Retry will occur after: None

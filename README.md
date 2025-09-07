@@ -1,4 +1,4 @@
-# 🎵 Spotify Car Display
+#  Spotify Desk Display
 
 A professional Spotify display interface designed for car LCD screens. Features real-time track information, album artwork, and seamless integration with your vehicle's display system.
 
@@ -40,8 +40,8 @@ A professional Spotify display interface designed for car LCD screens. Features 
 
 ```bash
 # Clone or download the project
-git clone <your-repo-url>
-cd spotify-car-display
+git clone https://github.com/URGG/SpotifyLCD
+cd SPOTIFYLCD/src
 
 # Install dependencies
 pip install -r requirements.txt
@@ -69,7 +69,7 @@ python spotify_car_display.py
 ```
 
 The display will show:
-- ✅ Professional startup sequence
+- ✅  startup sequence
 - 🎵 Current playing track (if any)
 - ⏸️ Idle screen when no music is playing
 - 🔄 Automatic updates as music changes
