@@ -1,0 +1,46 @@
+# Spotify Car Thing v4.0.0 - Installation Guide
+
+## Quick Start
+
+1. **First Time Setup:**
+   - Run `SpotifyCarThing.exe` 
+   - Follow the Spotify authentication prompts
+   - Connect your Turing Smart Screen LCD via USB
+
+2. **Requirements:**
+   - Spotify Premium account
+   - Turing Smart Screen LCD display
+   - Windows 10+ (or compatible system)
+   - Active internet connection
+
+3. **Usage:**
+   - Start Spotify and play music
+   - Run `SpotifyCarThing.exe`
+   - The display will show current track information
+   - Press Ctrl+C to exit safely
+
+## Troubleshooting
+
+If you get "spotipy not found" error:
+- This shouldn't happen with the standalone exe
+- If it does, install: pip install spotipy
+
+If the display doesn't work:
+1. Check USB connection to LCD
+2. Ensure Spotify is running with music playing
+3. Verify internet connection
+4. Check the log file for error details
+
+## Files Included
+
+- `SpotifyCarThing.exe` - Main application (includes all dependencies)
+- `spotify_client.py` - Spotify API client (for reference)
+- `README.md` - Full documentation
+- `requirements.txt` - Python dependencies (for developers)
+
+## Support
+
+For issues and support, please refer to the README.md file
+or visit the project repository.
+
+Happy listening! 🎵
