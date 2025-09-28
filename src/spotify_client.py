@@ -15,9 +15,9 @@ class SpotifyClient:
     def __init__(self, client_id: str = None, client_secret: str = None, redirect_uri: str = None):
         """Initialize Spotify client with credentials"""
         # Use provided parameters or fallback to hardcoded values
-        self.client_id = client_id or "8e0223def76a4e1cbc6374269641065b"  # Fixed: removed trailing comma
-        self.client_secret = client_secret or "10678f8dd9b34f3fb09b3a2c680d77aa"  # Fixed: removed trailing comma
-        self.redirect_uri = redirect_uri or "http://127.0.0.1:8080/callback"
+        self.client_id = client_id or ""  # Fixed: removed trailing comma
+        self.client_secret = client_secret or ""  
+        self.redirect_uri = redirect_uri or ""
         
         # Spotify scopes needed
         self.scope = "user-read-currently-playing user-read-playback-state user-modify-playback-state"
