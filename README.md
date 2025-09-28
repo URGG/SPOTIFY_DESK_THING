@@ -6,6 +6,8 @@ A professional Spotify display interface designed for car LCD screens. Features 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Python](https://img.shields.io/badge/python-3.7%2B-blue)
 
+![product](https://ae-pic-a1.aliexpress-media.com/kf/S5de7e118291a46bdadfea5c2920a0161Z.jpg_220x220q75.jpg_.avif)
+
 ## ✨ Features
 
 - **Real-time Track Display**: Shows current song, artist, album, and progress
